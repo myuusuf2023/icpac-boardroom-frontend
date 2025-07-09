@@ -1388,6 +1388,13 @@ const UserManagementModal = ({ users, rooms, onUpdateUsers, onCancel }) => {
   };
 
   const handleAddUser = (userData) => {
+    // Check if email already exists
+    const emailExists = users.some(user => user.email.toLowerCase() === userData.email.toLowerCase());
+    if (emailExists) {
+      alert('Error: A user with this email address already exists. Please use a different email.');
+      return;
+    }
+
     const newUser = {
       id: Date.now(),
       ...userData,
