@@ -225,6 +225,23 @@ const BookingBoard = () => {
     return timeSlots.findIndex(slot => slot === time);
   };
 
+  const isTimeSlotInPast = (date, time) => {
+    const now = new Date();
+    const slotDate = new Date(date);
+    
+    // If the date is in the future, it's not in the past
+    if (slotDate.toDateString() !== now.toDateString()) {
+      return slotDate < now;
+    }
+    
+    // If it's today, check if the time has passed
+    const [hours, minutes] = time.split(':').map(Number);
+    const slotDateTime = new Date(slotDate);
+    slotDateTime.setHours(hours, minutes, 0, 0);
+    
+    return slotDateTime < now;
+  };
+
 
   const isSlotBooked = (roomId, time) => {
     const currentDate = formatDate(selectedDate);
@@ -338,6 +355,12 @@ const BookingBoard = () => {
   };
 
   const handleBooking = (room, time) => {
+    // Check if the time slot is in the past
+    if (isTimeSlotInPast(selectedDate, time)) {
+      alert('Cannot book past time slots. Please select a future time.');
+      return;
+    }
+    
     setSelectedRoom(room);
     setSelectedTime(time);
     setShowBookingForm(true);
@@ -529,6 +552,8 @@ const BookingBoard = () => {
                     {timeSlots.map(time => {
                       const isBooked = isSlotBooked(room.id, time);
                       const booking = getBookingDetails(room.id, time);
+                      const isPast = isTimeSlotInPast(selectedDate, time);
+                      
                       return (
                         <td key={time}>
                           {isBooked ? (
@@ -562,6 +587,11 @@ const BookingBoard = () => {
                                   </button>
                                 </div>
                               )}
+                            </div>
+                          ) : isPast ? (
+                            <div className="time-slot past">
+                              <div className="slot-title">Past</div>
+                              <div className="slot-subtitle">Cannot book</div>
                             </div>
                           ) : (
                             <button
@@ -667,6 +697,15 @@ const BookingForm = ({ room, time, date, onConfirm, onCancel }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    // Validate past time for hourly bookings on today's date
+    if (formData.bookingType === 'hourly') {
+      if (isTimeSlotInPast(new Date(formData.startDate), formData.startTime)) {
+        alert('Cannot book past time slots. Please select a future time.');
+        return;
+      }
+    }
+    
     onConfirm(formData);
   };
 
@@ -848,9 +887,14 @@ const BookingForm = ({ room, time, date, onConfirm, onCancel }) => {
                   onChange={handleChange}
                   className="form-select"
                 >
-                  {timeSlots.map(slot => (
-                    <option key={slot} value={slot}>{slot}</option>
-                  ))}
+                  {timeSlots.map(slot => {
+                    const isSlotPast = isTimeSlotInPast(new Date(formData.startDate), slot);
+                    return (
+                      <option key={slot} value={slot} disabled={isSlotPast}>
+                        {slot} {isSlotPast ? '(Past)' : ''}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
               
@@ -864,9 +908,14 @@ const BookingForm = ({ room, time, date, onConfirm, onCancel }) => {
                   onChange={handleChange}
                   className="form-select"
                 >
-                  {timeSlots.map(slot => (
-                    <option key={slot} value={slot}>{slot}</option>
-                  ))}
+                  {timeSlots.map(slot => {
+                    const isSlotPast = isTimeSlotInPast(new Date(formData.startDate), slot);
+                    return (
+                      <option key={slot} value={slot} disabled={isSlotPast}>
+                        {slot} {isSlotPast ? '(Past)' : ''}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
             </div>
