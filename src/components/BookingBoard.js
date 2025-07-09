@@ -114,6 +114,24 @@ const BookingBoard = () => {
     return false;
   };
 
+  const getVisibleRooms = () => {
+    // If not logged in, show all rooms for general viewing
+    if (!currentUser) return rooms;
+    
+    // Super admin can see all rooms
+    if (currentUser.role === 'super_admin') return rooms;
+    
+    // Room admin can only see their assigned rooms
+    if (currentUser.role === 'room_admin') {
+      return rooms.filter(room => 
+        currentUser.managedRooms && currentUser.managedRooms.includes(room.id)
+      );
+    }
+    
+    // Regular users can see all rooms for booking (but with limited management)
+    return rooms;
+  };
+
   const canManageBooking = (booking) => {
     if (!currentUser) return false;
     if (currentUser.role === 'super_admin') return true;
@@ -534,7 +552,22 @@ const BookingBoard = () => {
                 </tr>
               </thead>
               <tbody>
-                {rooms.map(room => (
+                {getVisibleRooms().length === 0 ? (
+                  <tr>
+                    <td colSpan={timeSlots.length + 1} className="no-rooms-message">
+                      <div className="no-rooms-content">
+                        <h3>No Rooms Available</h3>
+                        <p>
+                          {currentUser ? 
+                            `You don't have access to any rooms. Please contact your administrator.` :
+                            'Please log in to view available rooms.'
+                          }
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  getVisibleRooms().map(room => (
                   <tr key={room.id}>
                     <td>
                       <div className="room-info">
@@ -606,7 +639,8 @@ const BookingBoard = () => {
                       );
                     })}
                   </tr>
-                ))}
+                ))
+                )}
               </tbody>
             </table>
           </div>
@@ -635,7 +669,7 @@ const BookingBoard = () => {
         {showEditForm && editingBooking && (
           <EditBookingForm
             booking={editingBooking}
-            rooms={rooms}
+            rooms={getVisibleRooms()}
             onUpdate={updateBooking}
             onCancel={() => {
               setShowEditForm(false);
