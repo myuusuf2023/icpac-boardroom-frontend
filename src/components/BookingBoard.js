@@ -689,6 +689,23 @@ const BookingForm = ({ room, time, date, onConfirm, onCancel }) => {
     return timeSlots.findIndex(slot => slot === time);
   };
 
+  const isTimeSlotInPast = (date, time) => {
+    const now = new Date();
+    const slotDate = new Date(date);
+    
+    // If the date is in the future, it's not in the past
+    if (slotDate.toDateString() !== now.toDateString()) {
+      return slotDate < now;
+    }
+    
+    // If it's today, check if the time has passed
+    const [hours, minutes] = time.split(':').map(Number);
+    const slotDateTime = new Date(slotDate);
+    slotDateTime.setHours(hours, minutes, 0, 0);
+    
+    return slotDateTime < now;
+  };
+
   const getEndTime = (startTime, duration) => {
     const startIndex = getTimeSlotIndex(startTime);
     const endIndex = startIndex + duration;
