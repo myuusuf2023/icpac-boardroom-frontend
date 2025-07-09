@@ -642,6 +642,26 @@
   color: #6b7280;
 }
 
+/* No Rooms Message Styles */
+.no-rooms-message {
+  text-align: center;
+  padding: 40px 20px;
+  background: #f9fafb;
+}
+
+.no-rooms-content h3 {
+  color: #374151;
+  margin: 0 0 12px 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.no-rooms-content p {
+  color: #6b7280;
+  margin: 0;
+  font-size: 0.875rem;
+}
+
 /* Modal Styles */
 .modal-overlay {
   position: fixed;
