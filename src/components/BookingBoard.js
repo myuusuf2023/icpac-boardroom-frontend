@@ -86,7 +86,7 @@ const BookingBoard = () => {
       setCurrentUser(user);
       setShowUserLogin(false);
       localStorage.setItem('icpac_current_user', JSON.stringify(user));
-      
+
       // Set admin status based on user role
       if (user.role === 'super_admin') {
         setIsAdmin(true);
@@ -104,6 +104,37 @@ const BookingBoard = () => {
     localStorage.removeItem('icpac_admin');
   };
 
+  const sendProcurementNotification = (booking) => {
+    if (!booking.procurementOrders || booking.procurementOrders.length === 0) {
+      return;
+    }
+
+    const notificationData = {
+      id: Date.now(),
+      bookingId: booking.id,
+      bookingTitle: booking.title,
+      organizer: booking.organizer,
+      date: booking.date || booking.startDate,
+      time: booking.time || booking.startTime,
+      attendeeCount: booking.attendeeCount,
+      procurementOrders: booking.procurementOrders,
+      status: 'pending',
+      createdAt: new Date().toISOString()
+    };
+
+    // Save to localStorage (in a real app, this would be sent to a server)
+    const existingNotifications = JSON.parse(localStorage.getItem('icpac_procurement_notifications') || '[]');
+    existingNotifications.push(notificationData);
+    localStorage.setItem('icpac_procurement_notifications', JSON.stringify(existingNotifications));
+
+    // Show a simple alert (in a real app, this would be proper notification)
+    const orderSummary = booking.procurementOrders.map(order =>
+      `${order.quantity} ${order.itemName}(s)`
+    ).join(', ');
+
+    alert(`Procurement notification sent!\n\nBooking: ${booking.title}\nOrganizer: ${booking.organizer}\nAttendees: ${booking.attendeeCount}\nOrders: ${orderSummary}\n\nProcurement officer has been notified.`);
+  };
+
 
   const canManageRoom = (roomId) => {
     if (!currentUser) return false;
@@ -117,17 +148,17 @@ const BookingBoard = () => {
   const getVisibleRooms = () => {
     // If not logged in, show all rooms for general viewing
     if (!currentUser) return rooms;
-    
+
     // Super admin can see all rooms
     if (currentUser.role === 'super_admin') return rooms;
-    
+
     // Room admin can only see their assigned rooms
     if (currentUser.role === 'room_admin') {
-      return rooms.filter(room => 
+      return rooms.filter(room =>
         currentUser.managedRooms && currentUser.managedRooms.includes(room.id)
       );
     }
-    
+
     // Regular users can see all rooms for booking (but with limited management)
     return rooms;
   };
@@ -155,13 +186,18 @@ const BookingBoard = () => {
   };
 
   const updateBooking = (bookingData) => {
-    const updatedBookings = bookings.map(booking => 
-      booking.id === editingBooking.id 
-        ? { ...booking, ...bookingData }
+    const updatedBooking = { ...editingBooking, ...bookingData };
+    const updatedBookings = bookings.map(booking =>
+      booking.id === editingBooking.id
+        ? updatedBooking
         : booking
     );
     setBookings(updatedBookings);
     saveBookingsToStorage(updatedBookings);
+
+    // Send procurement notification if there are orders
+    sendProcurementNotification(updatedBooking);
+
     setShowEditForm(false);
     setEditingBooking(null);
   };
@@ -204,9 +240,9 @@ const BookingBoard = () => {
   useEffect(() => {
     // Set up rooms
     setRooms([
-      { id: 1, name: 'Big Conference Room - Ground Floor', capacity: 100, amenities: ['Projector', 'Whiteboard', 'Video Conferencing', 'Audio System'] },
+      { id: 1, name: 'Conference Room - Ground Floor', capacity: 100, amenities: ['Projector', 'Whiteboard', 'Video Conferencing', 'Audio System'] },
       { id: 2, name: 'Big Conference Room - First Floor', capacity: 50, amenities: ['Projector', 'Whiteboard', 'Video Conferencing', 'Audio System'] },
-      { id: 3, name: 'Small Boardroom - First Floor', capacity: 8, amenities: ['TV Screen', 'Whiteboard'] },
+      { id: 3, name: 'Boardroom - 1st Floor', capacity: 8, amenities: ['TV Screen', 'Whiteboard'] },
       { id: 4, name: 'Situation Room', capacity: 12, amenities: ['Screen'] },
       { id: 5, name: 'Computer Lab 1 - Underground', capacity: 25, amenities: ['Computers', 'Projector', 'Whiteboard', 'Internet Access', 'Printers'] },
       { id: 6, name: 'Computer Lab 2 - First Floor', capacity: 25, amenities: ['Computers', 'Projector', 'Whiteboard', 'Internet Access', 'Printers'] },
@@ -231,7 +267,7 @@ const BookingBoard = () => {
   }, []);
 
   const timeSlots = [
-    '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', 
+    '08:00', '09:00', '10:00', '11:00', '12:00', '13:00',
     '14:00', '15:00', '16:00', '17:00', '18:00'
   ];
 
@@ -246,48 +282,48 @@ const BookingBoard = () => {
   const isTimeSlotInPast = (date, time) => {
     const now = new Date();
     const slotDate = new Date(date);
-    
+
     // If the date is in the future, it's not in the past
     if (slotDate.toDateString() !== now.toDateString()) {
       return slotDate < now;
     }
-    
+
     // If it's today, check if the time has passed
     const [hours, minutes] = time.split(':').map(Number);
     const slotDateTime = new Date(slotDate);
     slotDateTime.setHours(hours, minutes, 0, 0);
-    
+
     return slotDateTime < now;
   };
 
 
   const isSlotBooked = (roomId, time) => {
     const currentDate = formatDate(selectedDate);
-    
+
     return bookings.some(booking => {
       if (booking.roomId !== roomId) {
         return false;
       }
-      
+
       // Check if current date falls within booking date range
       const bookingStartDate = new Date(booking.startDate || booking.date);
       const bookingEndDate = new Date(booking.endDate || booking.date);
       const currentDateObj = new Date(currentDate);
-      
+
       // If current date is not within the booking date range, no conflict
       if (currentDateObj < bookingStartDate || currentDateObj > bookingEndDate) {
         return false;
       }
-      
+
       // For hourly bookings, check time slots
       if (booking.bookingType === 'hourly') {
         const bookingStartIndex = getTimeSlotIndex(booking.time);
         const bookingEndIndex = bookingStartIndex + booking.duration;
         const currentTimeIndex = getTimeSlotIndex(time);
-        
+
         return currentTimeIndex >= bookingStartIndex && currentTimeIndex < bookingEndIndex;
       }
-      
+
       // For full-day, multi-day, or weekly bookings, all time slots are booked
       return true;
     });
@@ -295,31 +331,31 @@ const BookingBoard = () => {
 
   const getBookingDetails = (roomId, time) => {
     const currentDate = formatDate(selectedDate);
-    
+
     return bookings.find(booking => {
       if (booking.roomId !== roomId) {
         return false;
       }
-      
+
       // Check if current date falls within booking date range
       const bookingStartDate = new Date(booking.startDate || booking.date);
       const bookingEndDate = new Date(booking.endDate || booking.date);
       const currentDateObj = new Date(currentDate);
-      
+
       // If current date is not within the booking date range, no match
       if (currentDateObj < bookingStartDate || currentDateObj > bookingEndDate) {
         return false;
       }
-      
+
       // For hourly bookings, check time slots
       if (booking.bookingType === 'hourly') {
         const bookingStartIndex = getTimeSlotIndex(booking.time);
         const bookingEndIndex = bookingStartIndex + booking.duration;
         const currentTimeIndex = getTimeSlotIndex(time);
-        
+
         return currentTimeIndex >= bookingStartIndex && currentTimeIndex < bookingEndIndex;
       }
-      
+
       // For full-day, multi-day, or weekly bookings, all time slots match
       return true;
     });
@@ -328,47 +364,47 @@ const BookingBoard = () => {
   const canBookDuration = (roomId, startTime, duration) => {
     const startIndex = getTimeSlotIndex(startTime);
     const endIndex = startIndex + duration;
-    
+
     // Check if booking would exceed available time slots
     if (endIndex > timeSlots.length) {
       return false;
     }
-    
+
     // Check if any slot in the duration is already booked
     for (let i = startIndex; i < endIndex; i++) {
       if (isSlotBooked(roomId, timeSlots[i])) {
         return false;
       }
     }
-    
+
     return true;
   };
 
   const canBookDateRange = (roomId, startDate, endDate, bookingType) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
-    
+
     // Check each date in the range
     for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
       const dateStr = date.toISOString().split('T')[0];
-      
+
       // Check if there are any existing bookings on this date for this room
       const hasConflict = bookings.some(booking => {
         if (booking.roomId !== roomId) return false;
-        
+
         // Check if booking overlaps with the date range
         const bookingStart = new Date(booking.startDate || booking.date);
         const bookingEnd = new Date(booking.endDate || booking.date);
-        
+
         // Check for date overlap
         return date >= bookingStart && date <= bookingEnd;
       });
-      
+
       if (hasConflict) {
         return false;
       }
     }
-    
+
     return true;
   };
 
@@ -378,7 +414,7 @@ const BookingBoard = () => {
       alert('Cannot book past time slots. Please select a future time.');
       return;
     }
-    
+
     setSelectedRoom(room);
     setSelectedTime(time);
     setShowBookingForm(true);
@@ -398,7 +434,7 @@ const BookingBoard = () => {
         return;
       }
     }
-    
+
     const newBooking = {
       id: Date.now(), // Use timestamp for unique ID
       roomId: selectedRoom.id,
@@ -414,13 +450,18 @@ const BookingBoard = () => {
       endTime: bookingData.endTime,
       title: bookingData.title,
       organizer: bookingData.organizer,
-      description: bookingData.description || ''
+      description: bookingData.description || '',
+      attendeeCount: bookingData.attendeeCount || 1,
+      procurementOrders: bookingData.procurementOrders || []
     };
-    
+
     const updatedBookings = [...bookings, newBooking];
     setBookings(updatedBookings);
     saveBookingsToStorage(updatedBookings); // Save to localStorage
-    
+
+    // Send procurement notification if there are orders
+    sendProcurementNotification(newBooking);
+
     setShowBookingForm(false);
     setSelectedRoom(null);
     setSelectedTime('');
@@ -450,22 +491,22 @@ const BookingBoard = () => {
               {currentUser ? (
                 <div className="user-panel">
                   <span className="user-info">
-                    {currentUser.name} 
+                    {currentUser.name}
                     <span className="role-badge role-{currentUser.role}">
-                      {currentUser.role === 'super_admin' ? 'Super Admin' : 
-                       currentUser.role === 'room_admin' ? 'Room Admin' : 'User'}
+                      {currentUser.role === 'super_admin' ? 'Super Admin' :
+                        currentUser.role === 'room_admin' ? 'Room Admin' : 'User'}
                     </span>
                   </span>
                   {currentUser.role === 'super_admin' && (
                     <>
-                      <button 
+                      <button
                         onClick={() => setShowUserManagement(true)}
                         className="user-management-btn"
                         title="Manage Users"
                       >
                         Manage Users
                       </button>
-                      <button 
+                      <button
                         onClick={clearAllBookings}
                         className="clear-bookings-btn"
                         title="Clear all bookings"
@@ -474,7 +515,7 @@ const BookingBoard = () => {
                       </button>
                     </>
                   )}
-                  <button 
+                  <button
                     onClick={handleUserLogout}
                     className="admin-logout-btn"
                     title="Logout"
@@ -484,7 +525,7 @@ const BookingBoard = () => {
                 </div>
               ) : (
                 <div className="auth-buttons">
-                  <button 
+                  <button
                     onClick={() => setShowUserLogin(true)}
                     className="admin-login-btn"
                     title="Login"
@@ -495,7 +536,7 @@ const BookingBoard = () => {
               )}
             </div>
           </div>
-          
+
           {/* Date Picker Input */}
           <div className="date-picker-section">
             <label className="date-picker-label">Choose any date:</label>
@@ -506,7 +547,7 @@ const BookingBoard = () => {
               className="date-picker-input"
             />
           </div>
-          
+
           {/* Quick Date Buttons */}
           <div className="date-buttons">
             <p className="quick-dates-label">Quick select (this week):</p>
@@ -532,15 +573,15 @@ const BookingBoard = () => {
         <div className="booking-grid">
           <div className="grid-header">
             <h2>
-              Room Availability - {selectedDate.toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
+              Room Availability - {selectedDate.toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
               })}
             </h2>
           </div>
-          
+
           <div className="grid-table-container">
             <table className="grid-table">
               <thead>
@@ -558,7 +599,7 @@ const BookingBoard = () => {
                       <div className="no-rooms-content">
                         <h3>No Rooms Available</h3>
                         <p>
-                          {currentUser ? 
+                          {currentUser ?
                             `You don't have access to any rooms. Please contact your administrator.` :
                             'Please log in to view available rooms.'
                           }
@@ -568,78 +609,78 @@ const BookingBoard = () => {
                   </tr>
                 ) : (
                   getVisibleRooms().map(room => (
-                  <tr key={room.id}>
-                    <td>
-                      <div className="room-info">
-                        <h3 className="room-name">{room.name}</h3>
-                        <p className="room-capacity">Capacity: {room.capacity} people</p>
-                        <div className="room-amenities">
-                          {room.amenities.map(amenity => (
-                            <span key={amenity} className="amenity-tag">
-                              {amenity}
-                            </span>
-                          ))}
+                    <tr key={room.id}>
+                      <td>
+                        <div className="room-info">
+                          <h3 className="room-name">{room.name}</h3>
+                          <p className="room-capacity">Capacity: {room.capacity} people</p>
+                          <div className="room-amenities">
+                            {room.amenities.map(amenity => (
+                              <span key={amenity} className="amenity-tag">
+                                {amenity}
+                              </span>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    {timeSlots.map(time => {
-                      const isBooked = isSlotBooked(room.id, time);
-                      const booking = getBookingDetails(room.id, time);
-                      const isPast = isTimeSlotInPast(selectedDate, time);
-                      
-                      return (
-                        <td key={time}>
-                          {isBooked ? (
-                            <div className={`time-slot booked ${booking.bookingType || 'hourly'}`}>
-                              <div className="slot-title">{booking.title}</div>
-                              <div className="slot-subtitle">{booking.organizer}</div>
-                              {booking.bookingType !== 'hourly' && (
-                                <div className="slot-duration">
-                                  {booking.bookingType === 'full-day' ? 'Full Day' :
-                                   booking.bookingType === 'weekly' ? 'Weekly' :
-                                   booking.bookingType === 'multi-day' ? 
-                                     `${new Date(booking.startDate).toLocaleDateString()} - ${new Date(booking.endDate).toLocaleDateString()}` :
-                                     'Extended'}
-                                </div>
-                              )}
-                              {canManageBooking(booking) && (
-                                <div className="admin-booking-controls">
-                                  <button
-                                    onClick={() => editBooking(booking)}
-                                    className="edit-booking-btn"
-                                    title="Edit this booking"
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    onClick={() => cancelBooking(booking.id)}
-                                    className="cancel-booking-btn"
-                                    title="Cancel this booking"
-                                  >
-                                    Cancel
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          ) : isPast ? (
-                            <div className="time-slot past">
-                              <div className="slot-title">Past</div>
-                              <div className="slot-subtitle">Cannot book</div>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => handleBooking(room, time)}
-                              className="time-slot available"
-                            >
-                              <div className="slot-title">Available</div>
-                              <div className="slot-subtitle">Click to book</div>
-                            </button>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))
+                      </td>
+                      {timeSlots.map(time => {
+                        const isBooked = isSlotBooked(room.id, time);
+                        const booking = getBookingDetails(room.id, time);
+                        const isPast = isTimeSlotInPast(selectedDate, time);
+
+                        return (
+                          <td key={time}>
+                            {isBooked ? (
+                              <div className={`time-slot booked ${booking.bookingType || 'hourly'}`}>
+                                <div className="slot-title">{booking.title}</div>
+                                <div className="slot-subtitle">{booking.organizer}</div>
+                                {booking.bookingType !== 'hourly' && (
+                                  <div className="slot-duration">
+                                    {booking.bookingType === 'full-day' ? 'Full Day' :
+                                      booking.bookingType === 'weekly' ? 'Weekly' :
+                                        booking.bookingType === 'multi-day' ?
+                                          `${new Date(booking.startDate).toLocaleDateString()} - ${new Date(booking.endDate).toLocaleDateString()}` :
+                                          'Extended'}
+                                  </div>
+                                )}
+                                {canManageBooking(booking) && (
+                                  <div className="admin-booking-controls">
+                                    <button
+                                      onClick={() => editBooking(booking)}
+                                      className="edit-booking-btn"
+                                      title="Edit this booking"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      onClick={() => cancelBooking(booking.id)}
+                                      className="cancel-booking-btn"
+                                      title="Cancel this booking"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            ) : isPast ? (
+                              <div className="time-slot past">
+                                <div className="slot-title">Past</div>
+                                <div className="slot-subtitle">Cannot book</div>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleBooking(room, time)}
+                                className="time-slot available"
+                              >
+                                <div className="slot-title">Available</div>
+                                <div className="slot-subtitle">Click to book</div>
+                              </button>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
@@ -696,14 +737,179 @@ const BookingBoard = () => {
             onCancel={() => setShowUserManagement(false)}
           />
         )}
+
+        {/* Footer */}
+        <footer className="booking-footer">
+          <div className="footer-content">
+            <div className="footer-section">
+              <div className="footer-logo">
+                <img src="/icpaclogo.png" alt="ICPAC Logo" className="footer-logo-img" />
+                <div className="footer-text">
+                  <h3>ICPAC Boardroom System</h3>
+                  <p>Streamlining meeting room reservations</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="footer-section">
+              <h4>Quick Links</h4>
+              <ul className="footer-links">
+                <li><a href="#" onClick={(e) => { e.preventDefault(); setShowUserLogin(true); }}>User Login</a></li>
+                <li><a href="#" onClick={(e) => { e.preventDefault(); setShowAdminLogin(true); }}>Admin Login</a></li>
+                <li><a href="#" onClick={(e) => { e.preventDefault(); window.location.reload(); }}>Refresh</a></li>
+              </ul>
+            </div>
+
+            <div className="footer-section">
+              <h4>Contact Info</h4>
+              <div className="contact-info">
+                <p><strong>ICPAC</strong></p>
+                <p>Climate Prediction and Applications Centre</p>
+                <p>Email: info@icpac.net</p>
+                <p>Phone: +254 20 7095000</p>
+              </div>
+            </div>
+
+            <div className="footer-section">
+              <h4>System Stats</h4>
+              <div className="system-stats">
+                <p>Total Rooms: {rooms.length}</p>
+                <p>Active Bookings: {bookings.length}</p>
+                <p>Registered Users: {users.length}</p>
+                <p>Last Updated: {new Date().toLocaleDateString()}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="footer-bottom">
+            <p>&copy; 2025 ICPAC. All rights reserved. | Boardroom Booking System v1.0</p>
+          </div>
+        </footer>
       </div>
+    </div>
+  );
+};
+
+const ProcurementOrdersSection = ({ orders, attendeeCount, onOrdersChange }) => {
+  const procurementItems = [
+    { id: 'coffee_tea', name: 'Coffee & Tea', unit: 'cup' },
+    { id: 'lunch', name: 'Lunch', unit: 'plate' },
+    { id: 'snacks', name: 'Snacks', unit: 'portion' },
+    { id: 'water', name: 'Bottled Water', unit: 'bottle' },
+    { id: 'juice', name: 'Fresh Juice', unit: 'glass' }
+  ];
+
+  const handleItemToggle = (itemId) => {
+    const existingOrder = orders.find(order => order.itemId === itemId);
+
+    if (existingOrder) {
+      onOrdersChange(orders.filter(order => order.itemId !== itemId));
+    } else {
+      const item = procurementItems.find(item => item.id === itemId);
+      const newOrder = {
+        itemId: itemId,
+        itemName: item.name,
+        quantity: attendeeCount,
+        unit: item.unit,
+        notes: ''
+      };
+      onOrdersChange([...orders, newOrder]);
+    }
+  };
+
+  const handleQuantityChange = (itemId, quantity) => {
+    const updatedOrders = orders.map(order =>
+      order.itemId === itemId
+        ? { ...order, quantity: parseInt(quantity) || 0 }
+        : order
+    );
+    onOrdersChange(updatedOrders);
+  };
+
+  const handleNotesChange = (itemId, notes) => {
+    const updatedOrders = orders.map(order =>
+      order.itemId === itemId
+        ? { ...order, notes }
+        : order
+    );
+    onOrdersChange(updatedOrders);
+  };
+
+
+  return (
+    <div className="procurement-orders">
+      <div className="procurement-grid">
+        {procurementItems.map(item => {
+          const isSelected = orders.some(order => order.itemId === item.id);
+          const selectedOrder = orders.find(order => order.itemId === item.id);
+
+          return (
+            <div key={item.id} className={`procurement-item ${isSelected ? 'selected' : ''}`}>
+              <div className="procurement-item-header">
+                <label className="procurement-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => handleItemToggle(item.id)}
+                  />
+                  <span className="procurement-item-name">{item.name}</span>
+                </label>
+              </div>
+
+              {isSelected && (
+                <div className="procurement-item-details">
+                  <div className="procurement-quantity">
+                    <label>Quantity:</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={selectedOrder?.quantity || attendeeCount}
+                      onChange={(e) => handleQuantityChange(item.id, e.target.value)}
+                      className="quantity-input"
+                    />
+                    <span className="quantity-unit">{item.unit}(s)</span>
+                  </div>
+
+                  <div className="procurement-notes">
+                    <label>Special Instructions:</label>
+                    <textarea
+                      value={selectedOrder?.notes || ''}
+                      onChange={(e) => handleNotesChange(item.id, e.target.value)}
+                      placeholder="Any special requirements or notes..."
+                      className="notes-textarea"
+                    />
+                  </div>
+
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {orders.length > 0 && (
+        <div className="procurement-summary">
+          <h4>Procurement Summary</h4>
+          <div className="procurement-summary-items">
+            {orders.map(order => (
+              <div key={order.itemId} className="summary-item">
+                <span>{order.itemName}</span>
+                <span>{order.quantity} {order.unit}(s)</span>
+              </div>
+            ))}
+          </div>
+          <div className="procurement-note">
+            <small>Note: Procurement officer will be notified of these orders for preparation.</small>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 const BookingForm = ({ room, time, date, onConfirm, onCancel }) => {
   const timeSlots = [
-    '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', 
+    '08:00', '09:00', '10:00', '11:00', '12:00', '13:00',
     '14:00', '15:00', '16:00', '17:00', '18:00'
   ];
 
@@ -716,7 +922,9 @@ const BookingForm = ({ room, time, date, onConfirm, onCancel }) => {
     endDate: date.toISOString().split('T')[0],
     startTime: time || '08:00',
     endTime: time ? (time === '18:00' ? '18:00' : timeSlots[timeSlots.findIndex(t => t === time) + 1]) : '09:00',
-    description: ''
+    description: '',
+    attendeeCount: 1,
+    procurementOrders: []
   });
 
   const getTimeSlotIndex = (time) => {
@@ -726,17 +934,17 @@ const BookingForm = ({ room, time, date, onConfirm, onCancel }) => {
   const isTimeSlotInPast = (date, time) => {
     const now = new Date();
     const slotDate = new Date(date);
-    
+
     // If the date is in the future, it's not in the past
     if (slotDate.toDateString() !== now.toDateString()) {
       return slotDate < now;
     }
-    
+
     // If it's today, check if the time has passed
     const [hours, minutes] = time.split(':').map(Number);
     const slotDateTime = new Date(slotDate);
     slotDateTime.setHours(hours, minutes, 0, 0);
-    
+
     return slotDateTime < now;
   };
 
@@ -748,7 +956,7 @@ const BookingForm = ({ room, time, date, onConfirm, onCancel }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     // Validate past time for hourly bookings on today's date
     if (formData.bookingType === 'hourly') {
       if (isTimeSlotInPast(new Date(formData.startDate), formData.startTime)) {
@@ -756,7 +964,7 @@ const BookingForm = ({ room, time, date, onConfirm, onCancel }) => {
         return;
       }
     }
-    
+
     onConfirm(formData);
   };
 
@@ -764,7 +972,7 @@ const BookingForm = ({ room, time, date, onConfirm, onCancel }) => {
     const { name, value } = e.target;
     setFormData(prev => {
       const newData = { ...prev, [name]: value };
-      
+
       // Auto-adjust end date based on booking type
       if (name === 'bookingType') {
         const startDate = new Date(prev.startDate);
@@ -793,12 +1001,12 @@ const BookingForm = ({ room, time, date, onConfirm, onCancel }) => {
             break;
         }
       }
-      
+
       // Ensure end date is not before start date
       if (name === 'endDate' && new Date(value) < new Date(prev.startDate)) {
         newData.endDate = prev.startDate;
       }
-      
+
       return newData;
     });
   };
@@ -819,7 +1027,7 @@ const BookingForm = ({ room, time, date, onConfirm, onCancel }) => {
         <div className="booking-info">
           <h4>{room.name}</h4>
           <p>
-            {formData.bookingType === 'hourly' 
+            {formData.bookingType === 'hourly'
               ? `${new Date(formData.startDate).toLocaleDateString()} at ${formData.startTime} - ${formData.endTime}`
               : `${new Date(formData.startDate).toLocaleDateString()} to ${new Date(formData.endDate).toLocaleDateString()}`
             } • Capacity: {room.capacity} people
@@ -907,7 +1115,7 @@ const BookingForm = ({ room, time, date, onConfirm, onCancel }) => {
                 className="form-input"
               />
             </div>
-            
+
             {formData.bookingType === 'multi-day' && (
               <div className="form-group">
                 <label className="form-label">
@@ -948,7 +1156,7 @@ const BookingForm = ({ room, time, date, onConfirm, onCancel }) => {
                   })}
                 </select>
               </div>
-              
+
               <div className="form-group">
                 <label className="form-label">
                   End Time *
@@ -984,6 +1192,36 @@ const BookingForm = ({ room, time, date, onConfirm, onCancel }) => {
               className="form-textarea"
               placeholder="Meeting description or agenda"
             />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">
+              Number of Attendees <span className="required">*</span>
+            </label>
+            <input
+              type="number"
+              name="attendeeCount"
+              value={formData.attendeeCount}
+              onChange={handleChange}
+              min="1"
+              max="100"
+              required
+              className="form-input"
+              placeholder="Enter number of attendees"
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">
+              Procurement Orders <span className="optional">(optional)</span>
+            </label>
+            <div className="procurement-section">
+              <ProcurementOrdersSection
+                orders={formData.procurementOrders}
+                attendeeCount={formData.attendeeCount}
+                onOrdersChange={(orders) => setFormData({ ...formData, procurementOrders: orders })}
+              />
+            </div>
           </div>
 
           <div className="form-buttons">
@@ -1109,11 +1347,13 @@ const EditBookingForm = ({ booking, rooms, onUpdate, onCancel }) => {
     description: booking.description || '',
     date: booking.date || '',
     time: booking.time || '',
-    roomId: booking.roomId || 1
+    roomId: booking.roomId || 1,
+    attendeeCount: booking.attendeeCount || 1,
+    procurementOrders: booking.procurementOrders || []
   });
 
   const timeSlots = [
-    '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', 
+    '08:00', '09:00', '10:00', '11:00', '12:00', '13:00',
     '14:00', '15:00', '16:00', '17:00', '18:00'
   ];
 
@@ -1236,6 +1476,36 @@ const EditBookingForm = ({ booking, rooms, onUpdate, onCancel }) => {
             />
           </div>
 
+          <div className="form-group">
+            <label className="form-label">
+              Number of Attendees <span className="required">*</span>
+            </label>
+            <input
+              type="number"
+              name="attendeeCount"
+              value={formData.attendeeCount}
+              onChange={handleChange}
+              min="1"
+              max="100"
+              required
+              className="form-input"
+              placeholder="Enter number of attendees"
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">
+              Procurement Orders <span className="optional">(optional)</span>
+            </label>
+            <div className="procurement-section">
+              <ProcurementOrdersSection
+                orders={formData.procurementOrders}
+                attendeeCount={formData.attendeeCount}
+                onOrdersChange={(orders) => setFormData({ ...formData, procurementOrders: orders })}
+              />
+            </div>
+          </div>
+
           <div className="form-buttons">
             <button type="button" onClick={onCancel} className="form-button secondary">
               Cancel
@@ -1276,7 +1546,7 @@ const UserRegistrationModal = ({ rooms, onRegister, onCancel }) => {
     const updatedRooms = formData.managedRooms.includes(roomId)
       ? formData.managedRooms.filter(id => id !== roomId)
       : [...formData.managedRooms, roomId];
-    
+
     setFormData({
       ...formData,
       managedRooms: updatedRooms
@@ -1303,7 +1573,7 @@ const UserRegistrationModal = ({ rooms, onRegister, onCancel }) => {
               required
             />
           </div>
-          
+
           <div className="form-group">
             <label className="form-label">Email *</label>
             <input
@@ -1316,7 +1586,7 @@ const UserRegistrationModal = ({ rooms, onRegister, onCancel }) => {
               required
             />
           </div>
-          
+
           <div className="form-group">
             <label className="form-label">Password *</label>
             <input
@@ -1329,7 +1599,7 @@ const UserRegistrationModal = ({ rooms, onRegister, onCancel }) => {
               required
             />
           </div>
-          
+
           <div className="form-group">
             <label className="form-label">Role *</label>
             <select
@@ -1343,7 +1613,7 @@ const UserRegistrationModal = ({ rooms, onRegister, onCancel }) => {
               <option value="super_admin">Super Admin</option>
             </select>
           </div>
-          
+
           {formData.role === 'room_admin' && (
             <div className="form-group">
               <label className="form-label">Managed Rooms</label>
@@ -1361,7 +1631,7 @@ const UserRegistrationModal = ({ rooms, onRegister, onCancel }) => {
               </div>
             </div>
           )}
-          
+
           <div className="form-buttons">
             <button type="button" onClick={onCancel} className="form-button secondary">
               Cancel
@@ -1420,7 +1690,7 @@ const UserManagementModal = ({ users, rooms, onUpdateUsers, onCancel }) => {
         </div>
         <div className="user-management-content">
           <div className="user-management-header">
-            <button 
+            <button
               onClick={() => setShowAddUser(true)}
               className="add-user-btn"
               title="Add new user"
@@ -1428,7 +1698,7 @@ const UserManagementModal = ({ users, rooms, onUpdateUsers, onCancel }) => {
               Add New User
             </button>
           </div>
-          
+
           <div className="users-table">
             <table>
               <thead>
@@ -1447,8 +1717,8 @@ const UserManagementModal = ({ users, rooms, onUpdateUsers, onCancel }) => {
                     <td>{user.email}</td>
                     <td>
                       <span className={`role-badge role-${user.role}`}>
-                        {user.role === 'super_admin' ? 'Super Admin' : 
-                         user.role === 'room_admin' ? 'Room Admin' : 'User'}
+                        {user.role === 'super_admin' ? 'Super Admin' :
+                          user.role === 'room_admin' ? 'Room Admin' : 'User'}
                       </span>
                     </td>
                     <td>{user.managedRooms ? getRoomNames(user.managedRooms) : 'None'}</td>
@@ -1466,14 +1736,14 @@ const UserManagementModal = ({ users, rooms, onUpdateUsers, onCancel }) => {
               </tbody>
             </table>
           </div>
-          
+
           <div className="form-buttons">
             <button onClick={onCancel} className="form-button primary">
               Close
             </button>
           </div>
         </div>
-        
+
         {/* Add User Modal */}
         {showAddUser && (
           <UserRegistrationModal
