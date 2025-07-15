@@ -630,7 +630,12 @@ const BookingBoard = () => {
 
                         return (
                           <td key={time}>
-                            {isBooked ? (
+                            {isBooked && isPast ? (
+                              <div className="time-slot past">
+                                <div className="slot-title">Past</div>
+                                <div className="slot-subtitle">{booking.title}</div>
+                              </div>
+                            ) : isBooked ? (
                               <div className={`time-slot booked ${booking.bookingType || 'hourly'}`}>
                                 <div className="slot-title">{booking.title}</div>
                                 <div className="slot-subtitle">{booking.organizer}</div>
@@ -948,11 +953,6 @@ const BookingForm = ({ room, time, date, onConfirm, onCancel }) => {
     return slotDateTime < now;
   };
 
-  const getEndTime = (startTime, duration) => {
-    const startIndex = getTimeSlotIndex(startTime);
-    const endIndex = startIndex + duration;
-    return endIndex < timeSlots.length ? timeSlots[endIndex] : 'End of day';
-  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
