@@ -1366,8 +1366,6 @@ const EditBookingForm = ({ booking, rooms, onUpdate, onCancel }) => {
     });
   };
 
-  const selectedRoom = rooms.find(room => room.id === formData.roomId);
-
   return (
     <div className="modal-overlay">
       <div className="modal-content">
