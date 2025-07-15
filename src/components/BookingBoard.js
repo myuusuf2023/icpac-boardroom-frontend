@@ -1821,9 +1821,7 @@ const ProcurementDashboard = ({ bookings, rooms, onClose }) => {
     return 1;
   };
 
-  const getTotalQuantity = (procurementOrders) => {
-    return procurementOrders.reduce((total, order) => total + order.quantity, 0);
-  };
+  // Removed getTotalQuantity function - replaced with inline calculations that include multi-day multipliers
 
   const orders = getAllProcurementOrders();
 
@@ -1834,10 +1832,24 @@ const ProcurementDashboard = ({ bookings, rooms, onClose }) => {
   
   // Calculate stats with debugging
   const totalOrders = orders.length || 0;
+  
+  // Fix total items calculation - sum up all quantities, not just count items
   const totalItems = orders.reduce((total, order) => {
-    const itemCount = order.procurementOrders ? order.procurementOrders.length : 0;
-    console.log(`Order ${order.id}: ${itemCount} items`);
-    return total + itemCount;
+    if (!order.procurementOrders || !Array.isArray(order.procurementOrders)) {
+      console.log(`Order ${order.id}: No procurement orders`);
+      return total;
+    }
+    
+    const orderTotal = order.procurementOrders.reduce((orderSum, item) => {
+      const quantity = parseInt(item.quantity) || 0;
+      const days = order.totalDays || 1;
+      const itemTotal = quantity * days;
+      console.log(`Item ${item.itemName}: ${quantity} × ${days} days = ${itemTotal}`);
+      return orderSum + itemTotal;
+    }, 0);
+    
+    console.log(`Order ${order.id}: ${orderTotal} total items`);
+    return total + orderTotal;
   }, 0);
   
   console.log('Total Orders:', totalOrders);
@@ -1899,7 +1911,15 @@ const ProcurementDashboard = ({ bookings, rooms, onClose }) => {
           </div>
           <div class="stat">
             <h3>${filteredOrders.reduce((total, order) => {
-              return total + (order.procurementOrders ? getTotalQuantity(order.procurementOrders) : 0);
+              if (!order.procurementOrders || !Array.isArray(order.procurementOrders)) {
+                return total;
+              }
+              const orderTotal = order.procurementOrders.reduce((orderSum, item) => {
+                const quantity = parseInt(item.quantity) || 0;
+                const days = order.totalDays || 1;
+                return orderSum + (quantity * days);
+              }, 0);
+              return total + orderTotal;
             }, 0)}</h3>
             <p>Total Items</p>
           </div>
@@ -2075,8 +2095,9 @@ const ProcurementDashboard = ({ bookings, rooms, onClose }) => {
                   <span className="stat-number">{totalOrders}</span>
                 </div>
                 <div className="stat-card">
-                  <h4>Total Items</h4>
+                  <h4>Total Items Needed</h4>
                   <span className="stat-number">{totalItems}</span>
+                  <small className="stat-description">Including multi-day quantities</small>
                 </div>
                 <div className="stat-card">
                   <h4>Today's Orders</h4>
