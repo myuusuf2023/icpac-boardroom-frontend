@@ -220,7 +220,7 @@ const BookingBoard = () => {
     if (savedUsers && savedUsers.length > 0) {
       setUsers(savedUsers);
     } else {
-      // Create default super admin
+      // Create default super admin and procurement officer
       const defaultUsers = [
         {
           id: 1,
@@ -228,6 +228,15 @@ const BookingBoard = () => {
           email: 'admin@icpac.net',
           password: 'admin123',
           role: 'super_admin',
+          managedRooms: [],
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: 2,
+          name: 'Procurement Officer',
+          email: 'procurement@icpac.net',
+          password: 'procurement123',
+          role: 'procurement_officer',
           managedRooms: [],
           createdAt: new Date().toISOString()
         }
@@ -493,9 +502,10 @@ const BookingBoard = () => {
                 <div className="user-panel">
                   <span className="user-info">
                     {currentUser.name}
-                    <span className="role-badge role-{currentUser.role}">
+                    <span className={`role-badge role-${currentUser.role}`}>
                       {currentUser.role === 'super_admin' ? 'Super Admin' :
-                        currentUser.role === 'room_admin' ? 'Room Admin' : 'User'}
+                        currentUser.role === 'room_admin' ? 'Room Admin' :
+                        currentUser.role === 'procurement_officer' ? 'Procurement Officer' : 'User'}
                     </span>
                   </span>
                   {currentUser.role === 'super_admin' && (
@@ -515,6 +525,15 @@ const BookingBoard = () => {
                         Clear All
                       </button>
                     </>
+                  )}
+                  {currentUser.role === 'procurement_officer' && (
+                    <button
+                      onClick={() => setShowProcurementDashboard(true)}
+                      className="procurement-dashboard-btn"
+                      title="View Procurement Dashboard"
+                    >
+                      Procurement Dashboard
+                    </button>
                   )}
                   <button
                     onClick={handleUserLogout}
@@ -741,6 +760,14 @@ const BookingBoard = () => {
             rooms={rooms}
             onUpdateUsers={setUsers}
             onCancel={() => setShowUserManagement(false)}
+          />
+        )}
+
+        {showProcurementDashboard && (
+          <ProcurementDashboard
+            bookings={bookings}
+            rooms={rooms}
+            onClose={() => setShowProcurementDashboard(false)}
           />
         )}
 
@@ -1605,6 +1632,7 @@ const UserRegistrationModal = ({ rooms, onRegister, onCancel }) => {
             >
               <option value="user">User</option>
               <option value="room_admin">Room Admin</option>
+              <option value="procurement_officer">Procurement Officer</option>
               <option value="super_admin">Super Admin</option>
             </select>
           </div>
@@ -1713,7 +1741,8 @@ const UserManagementModal = ({ users, rooms, onUpdateUsers, onCancel }) => {
                     <td>
                       <span className={`role-badge role-${user.role}`}>
                         {user.role === 'super_admin' ? 'Super Admin' :
-                          user.role === 'room_admin' ? 'Room Admin' : 'User'}
+                          user.role === 'room_admin' ? 'Room Admin' :
+                          user.role === 'procurement_officer' ? 'Procurement Officer' : 'User'}
                       </span>
                     </td>
                     <td>{user.managedRooms ? getRoomNames(user.managedRooms) : 'None'}</td>
@@ -1747,6 +1776,146 @@ const UserManagementModal = ({ users, rooms, onUpdateUsers, onCancel }) => {
             onCancel={() => setShowAddUser(false)}
           />
         )}
+      </div>
+    </div>
+  );
+};
+
+// Procurement Dashboard Component
+const ProcurementDashboard = ({ bookings, rooms, onClose }) => {
+  const orders = bookings
+    .filter(booking => booking.procurementOrders && booking.procurementOrders.length > 0)
+    .map(booking => ({
+      ...booking,
+      roomName: rooms.find(room => room.id === booking.roomId)?.name || 'Unknown Room',
+      procurementOrders: booking.procurementOrders.map(item => ({
+        ...item,
+        itemName: item.itemName || item.name || 'Unknown Item',
+        quantity: item.quantity || 1,
+        notes: item.notes || ''
+      }))
+    }))
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  const formatTime = (timeString) => {
+    const [hours, minutes] = timeString.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}:${minutes} ${ampm}`;
+  };
+
+  const getOrderStatus = (order) => {
+    const orderDate = new Date(order.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    orderDate.setHours(0, 0, 0, 0);
+    
+    if (orderDate < today) {
+      return { status: 'Past', className: 'past' };
+    } else if (orderDate.getTime() === today.getTime()) {
+      return { status: 'Today', className: 'today' };
+    } else {
+      return { status: 'Upcoming', className: 'upcoming' };
+    }
+  };
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content large">
+        <div className="modal-header">
+          <h2 className="modal-title">Procurement Orders Dashboard</h2>
+          <button onClick={onClose} className="modal-close">×</button>
+        </div>
+
+        <div className="procurement-dashboard">
+          {orders.length === 0 ? (
+            <div className="no-orders">
+              <h3>No Procurement Orders</h3>
+              <p>No bookings have procurement orders yet.</p>
+            </div>
+          ) : (
+            <div className="orders-container">
+              <div className="dashboard-stats">
+                <div className="stat-card">
+                  <h4>Total Orders</h4>
+                  <span className="stat-number">{orders.length}</span>
+                </div>
+                <div className="stat-card">
+                  <h4>Total Items</h4>
+                  <span className="stat-number">
+                    {orders.reduce((total, order) => total + order.procurementOrders.length, 0)}
+                  </span>
+                </div>
+                <div className="stat-card">
+                  <h4>Today's Orders</h4>
+                  <span className="stat-number">
+                    {orders.filter(order => getOrderStatus(order).status === 'Today').length}
+                  </span>
+                </div>
+              </div>
+
+              <div className="orders-table-container">
+                <table className="orders-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Time</th>
+                      <th>Meeting</th>
+                      <th>Organizer</th>
+                      <th>Room</th>
+                      <th>Attendees</th>
+                      <th>Items Required</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.map(order => {
+                      const orderStatus = getOrderStatus(order);
+                      return (
+                        <tr key={order.id} className={orderStatus.className}>
+                          <td>{formatDate(order.date)}</td>
+                          <td>{formatTime(order.time)}</td>
+                          <td>{order.title}</td>
+                          <td>{order.organizer}</td>
+                          <td>{order.roomName}</td>
+                          <td>{order.attendeeCount || 1}</td>
+                          <td>
+                            <div className="items-list">
+                              {order.procurementOrders.map((item, index) => (
+                                <div key={index} className="item-row">
+                                  <span className="item-name">{item.itemName}</span>
+                                  <span className="item-quantity">×{item.quantity}</span>
+                                  {item.notes && (
+                                    <div className="item-notes">{item.notes}</div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                          <td>
+                            <span className={`status-badge ${orderStatus.className}`}>
+                              {orderStatus.status}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
