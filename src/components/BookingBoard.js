@@ -1827,6 +1827,22 @@ const ProcurementDashboard = ({ bookings, rooms, onClose }) => {
 
   const orders = getAllProcurementOrders();
 
+  // Debug: Log orders to see what's happening
+  console.log('Procurement Orders:', orders);
+  console.log('Orders length:', orders.length);
+  console.log('Sample order:', orders[0]);
+  
+  // Calculate stats with debugging
+  const totalOrders = orders.length || 0;
+  const totalItems = orders.reduce((total, order) => {
+    const itemCount = order.procurementOrders ? order.procurementOrders.length : 0;
+    console.log(`Order ${order.id}: ${itemCount} items`);
+    return total + itemCount;
+  }, 0);
+  
+  console.log('Total Orders:', totalOrders);
+  console.log('Total Items:', totalItems);
+
   // Download functions
   const downloadPDF = (filterType = null) => {
     const filteredOrders = filterType ? orders.filter(order => order.duration === filterType) : orders;
@@ -1878,15 +1894,23 @@ const ProcurementDashboard = ({ bookings, rooms, onClose }) => {
         
         <div class="stats">
           <div class="stat">
-            <h3>${filteredOrders.length}</h3>
+            <h3>${filteredOrders.length || 0}</h3>
             <p>Total Orders</p>
           </div>
           <div class="stat">
-            <h3>${filteredOrders.reduce((total, order) => total + getTotalQuantity(order.procurementOrders), 0)}</h3>
+            <h3>${filteredOrders.reduce((total, order) => {
+              return total + (order.procurementOrders ? getTotalQuantity(order.procurementOrders) : 0);
+            }, 0)}</h3>
             <p>Total Items</p>
           </div>
           <div class="stat">
-            <h3>${filteredOrders.filter(order => getOrderStatus(order).status === 'Today').length}</h3>
+            <h3>${filteredOrders.filter(order => {
+              try {
+                return getOrderStatus(order).status === 'Today';
+              } catch (e) {
+                return false;
+              }
+            }).length}</h3>
             <p>Today's Orders</p>
           </div>
         </div>
@@ -2038,7 +2062,7 @@ const ProcurementDashboard = ({ bookings, rooms, onClose }) => {
         </div>
 
         <div className="procurement-dashboard">
-          {orders.length === 0 ? (
+          {!orders || orders.length === 0 ? (
             <div className="no-orders">
               <h3>No Procurement Orders</h3>
               <p>No bookings have procurement orders yet.</p>
@@ -2048,24 +2072,34 @@ const ProcurementDashboard = ({ bookings, rooms, onClose }) => {
               <div className="dashboard-stats">
                 <div className="stat-card">
                   <h4>Total Orders</h4>
-                  <span className="stat-number">{orders.length}</span>
+                  <span className="stat-number">{totalOrders}</span>
                 </div>
                 <div className="stat-card">
                   <h4>Total Items</h4>
-                  <span className="stat-number">
-                    {orders.reduce((total, order) => total + order.procurementOrders.length, 0)}
-                  </span>
+                  <span className="stat-number">{totalItems}</span>
                 </div>
                 <div className="stat-card">
                   <h4>Today's Orders</h4>
                   <span className="stat-number">
-                    {orders.filter(order => getOrderStatus(order).status === 'Today').length}
+                    {orders.filter(order => {
+                      try {
+                        return getOrderStatus(order).status === 'Today';
+                      } catch (e) {
+                        return false;
+                      }
+                    }).length}
                   </span>
                 </div>
                 <div className="stat-card declined-stat">
                   <h4>Declined Orders</h4>
                   <span className="stat-number declined-number">
-                    {orders.filter(order => getOrderStatus(order).status === 'Declined').length}
+                    {orders.filter(order => {
+                      try {
+                        return getOrderStatus(order).status === 'Declined';
+                      } catch (e) {
+                        return false;
+                      }
+                    }).length}
                   </span>
                 </div>
               </div>
