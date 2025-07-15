@@ -75,9 +75,9 @@ const BookingBoard = () => {
       return selectedDateObj >= now;
     }
     
-    // For today, show bookings only if it's before 18:00 (6 PM)
+    // For today, show bookings only if it's before 22:00 (10 PM) - extended for demos
     const currentHour = now.getHours();
-    return currentHour < 18;
+    return currentHour < 22;
   };
 
   const handleAdminLogin = (password) => {
@@ -729,7 +729,7 @@ const BookingBoard = () => {
             <div className="day-closed-message">
               <div className="day-closed-content">
                 <h3>📅 Day Complete</h3>
-                <p>Booking for this day is no longer available (after 6:00 PM).</p>
+                <p>Booking for this day is no longer available (after 10:00 PM).</p>
                 <p>Please select a future date to make new bookings.</p>
               </div>
             </div>
