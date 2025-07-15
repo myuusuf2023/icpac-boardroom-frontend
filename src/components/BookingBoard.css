@@ -1637,3 +1637,30 @@
     min-width: 800px;
   }
 }
+
+/* Day Closed Message */
+.day-closed-message {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  padding: 40px;
+  margin-top: 20px;
+  text-align: center;
+}
+
+.day-closed-content h3 {
+  color: #f59e0b;
+  font-size: 1.5rem;
+  margin: 0 0 16px 0;
+}
+
+.day-closed-content p {
+  color: #6b7280;
+  margin: 8px 0;
+  font-size: 1rem;
+}
+
+.day-closed-content p:last-child {
+  color: #10b981;
+  font-weight: 500;
+}

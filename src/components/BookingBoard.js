@@ -66,6 +66,20 @@ const BookingBoard = () => {
     }
   };
 
+  const shouldShowBookingInterface = (date) => {
+    const now = new Date();
+    const selectedDateObj = new Date(date);
+    
+    // Always show future dates
+    if (selectedDateObj.toDateString() !== now.toDateString()) {
+      return selectedDateObj >= now;
+    }
+    
+    // For today, show bookings only if it's before 18:00 (6 PM)
+    const currentHour = now.getHours();
+    return currentHour < 18;
+  };
+
   const handleAdminLogin = (password) => {
     if (password === 'admin123') { // Simple password check
       setIsAdmin(true);
@@ -602,33 +616,34 @@ const BookingBoard = () => {
             </h2>
           </div>
 
-          <div className="grid-table-container">
-            <table className="grid-table">
-              <thead>
-                <tr>
-                  <th>Room</th>
-                  {timeSlots.map(time => (
-                    <th key={time}>{time}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {getVisibleRooms().length === 0 ? (
+          {shouldShowBookingInterface(selectedDate) ? (
+            <div className="grid-table-container">
+              <table className="grid-table">
+                <thead>
                   <tr>
-                    <td colSpan={timeSlots.length + 1} className="no-rooms-message">
-                      <div className="no-rooms-content">
-                        <h3>No Rooms Available</h3>
-                        <p>
-                          {currentUser ?
-                            `You don't have access to any rooms. Please contact your administrator.` :
-                            'Please log in to view available rooms.'
-                          }
-                        </p>
-                      </div>
-                    </td>
+                    <th>Room</th>
+                    {timeSlots.map(time => (
+                      <th key={time}>{time}</th>
+                    ))}
                   </tr>
-                ) : (
-                  getVisibleRooms().map(room => (
+                </thead>
+                <tbody>
+                  {getVisibleRooms().length === 0 ? (
+                    <tr>
+                      <td colSpan={timeSlots.length + 1} className="no-rooms-message">
+                        <div className="no-rooms-content">
+                          <h3>No Rooms Available</h3>
+                          <p>
+                            {currentUser ?
+                              `You don't have access to any rooms. Please contact your administrator.` :
+                              'Please log in to view available rooms.'
+                            }
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    getVisibleRooms().map(room => (
                     <tr key={room.id}>
                       <td>
                         <div className="room-info">
@@ -707,9 +722,18 @@ const BookingBoard = () => {
                     </tr>
                   ))
                 )}
-              </tbody>
-            </table>
-          </div>
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="day-closed-message">
+              <div className="day-closed-content">
+                <h3>📅 Day Complete</h3>
+                <p>Booking for this day is no longer available (after 6:00 PM).</p>
+                <p>Please select a future date to make new bookings.</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Booking Form Modal */}
