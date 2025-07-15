@@ -16,6 +16,7 @@ const BookingBoard = () => {
   const [showUserLogin, setShowUserLogin] = useState(false);
   const [users, setUsers] = useState([]);
   const [showUserManagement, setShowUserManagement] = useState(false);
+  const [showProcurementDashboard, setShowProcurementDashboard] = useState(false);
 
   // localStorage functions
   const saveBookingsToStorage = (bookingsData) => {
