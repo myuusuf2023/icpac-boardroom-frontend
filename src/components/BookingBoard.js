@@ -70,9 +70,21 @@ const BookingBoard = () => {
     const now = new Date();
     const selectedDateObj = new Date(date);
     
-    // Always show future dates
-    if (selectedDateObj.toDateString() !== now.toDateString()) {
-      return selectedDateObj >= now;
+    // Set both dates to start of day for comparison
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    
+    const selectedDay = new Date(selectedDateObj);
+    selectedDay.setHours(0, 0, 0, 0);
+    
+    // Hide interface for past dates completely
+    if (selectedDay < today) {
+      return false;
+    }
+    
+    // For future dates, always show
+    if (selectedDay > today) {
+      return true;
     }
     
     // For today, show bookings only if it's before 22:00 (10 PM) - extended for demos
@@ -728,9 +740,34 @@ const BookingBoard = () => {
           ) : (
             <div className="day-closed-message">
               <div className="day-closed-content">
-                <h3>📅 Day Complete</h3>
-                <p>Booking for this day is no longer available (after 10:00 PM).</p>
-                <p>Please select a future date to make new bookings.</p>
+                {(() => {
+                  const now = new Date();
+                  const selectedDateObj = new Date(selectedDate);
+                  const today = new Date(now);
+                  today.setHours(0, 0, 0, 0);
+                  const selectedDay = new Date(selectedDateObj);
+                  selectedDay.setHours(0, 0, 0, 0);
+                  
+                  if (selectedDay < today) {
+                    // Past date
+                    return (
+                      <>
+                        <h3>Day Complete</h3>
+                        <p>This date has passed. Bookings are no longer available.</p>
+                        <p>Please select today or a future date to make new bookings.</p>
+                      </>
+                    );
+                  } else {
+                    // Today after hours
+                    return (
+                      <>
+                        <h3>Day Complete</h3>
+                        <p>Booking for today is no longer available (after 10:00 PM).</p>
+                        <p>Please select a future date to make new bookings.</p>
+                      </>
+                    );
+                  }
+                })()}
               </div>
             </div>
           )}
