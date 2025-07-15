@@ -1414,6 +1414,15 @@
   color: #10b981;
 }
 
+.declined-stat {
+  border: 1px solid #fca5a5;
+  background: #fef2f2;
+}
+
+.declined-number {
+  color: #dc2626;
+}
+
 .orders-table-container {
   overflow-x: auto;
   border-radius: 8px;
@@ -1542,6 +1551,12 @@
   color: #2563eb;
 }
 
+.status-badge.declined {
+  background: #fecaca;
+  color: #dc2626;
+  font-weight: 600;
+}
+
 .orders-table tbody tr.past {
   opacity: 0.7;
 }
@@ -1552,6 +1567,11 @@
 
 .orders-table tbody tr.upcoming {
   background: #f0f9ff;
+}
+
+.orders-table tbody tr.declined {
+  background: #fecaca;
+  opacity: 0.8;
 }
 
 /* Modal header with download buttons */

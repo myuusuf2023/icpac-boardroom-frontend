@@ -1957,15 +1957,38 @@ const ProcurementDashboard = ({ bookings, rooms, onClose }) => {
   };
 
   const getOrderStatus = (order) => {
-    const orderDate = new Date(order.date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    orderDate.setHours(0, 0, 0, 0);
+    const orderDate = new Date(order.date || order.startDate);
+    const orderTime = order.time || order.startTime;
     
-    if (orderDate < today) {
+    // Create full datetime for the order
+    const orderDateTime = new Date(orderDate);
+    const [hours, minutes] = orderTime.split(':');
+    orderDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    
+    // Calculate time difference in hours
+    const currentTime = new Date();
+    const timeDifferenceHours = (currentTime - orderDateTime) / (1000 * 60 * 60);
+    
+    // Check if order is declined (2+ hours past)
+    if (timeDifferenceHours >= 2) {
+      return { status: 'Declined', className: 'declined' };
+    }
+    
+    // Check if order date is in the past
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+    const orderDateOnly = new Date(orderDate);
+    orderDateOnly.setHours(0, 0, 0, 0);
+    
+    if (orderDateOnly < todayDate) {
       return { status: 'Past', className: 'past' };
-    } else if (orderDate.getTime() === today.getTime()) {
-      return { status: 'Today', className: 'today' };
+    } else if (orderDateOnly.getTime() === todayDate.getTime()) {
+      // If today, check if time has passed
+      if (timeDifferenceHours > 0) {
+        return { status: 'Past', className: 'past' };
+      } else {
+        return { status: 'Today', className: 'today' };
+      }
     } else {
       return { status: 'Upcoming', className: 'upcoming' };
     }
@@ -2037,6 +2060,12 @@ const ProcurementDashboard = ({ bookings, rooms, onClose }) => {
                   <h4>Today's Orders</h4>
                   <span className="stat-number">
                     {orders.filter(order => getOrderStatus(order).status === 'Today').length}
+                  </span>
+                </div>
+                <div className="stat-card declined-stat">
+                  <h4>Declined Orders</h4>
+                  <span className="stat-number declined-number">
+                    {orders.filter(order => getOrderStatus(order).status === 'Declined').length}
                   </span>
                 </div>
               </div>
