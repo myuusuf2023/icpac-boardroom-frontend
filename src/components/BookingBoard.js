@@ -932,10 +932,6 @@ const BookingForm = ({ room, time, date, onConfirm, onCancel }) => {
     procurementOrders: []
   });
 
-  const getTimeSlotIndex = (time) => {
-    return timeSlots.findIndex(slot => slot === time);
-  };
-
   const isTimeSlotInPast = (date, time) => {
     const now = new Date();
     const slotDate = new Date(date);
