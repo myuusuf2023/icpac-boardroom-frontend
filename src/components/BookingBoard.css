@@ -1264,3 +1264,348 @@
     padding: 15px 20px;
   }
 }
+
+/* Download Buttons Styles */
+.download-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.download-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.download-section h4 {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.download-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.duration-btn {
+  font-size: 0.8rem;
+  padding: 5px 10px;
+}
+
+.download-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.download-btn.small {
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  min-width: 32px;
+  justify-content: center;
+}
+
+.download-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.pdf-btn {
+  background: #dc2626;
+  color: white;
+}
+
+.pdf-btn:hover {
+  background: #b91c1c;
+}
+
+.green-btn {
+  background: #22c55e;
+  color: white;
+}
+
+.green-btn:hover {
+  background: #16a34a;
+}
+
+.blue-btn {
+  background: #3b82f6;
+  color: white;
+}
+
+.blue-btn:hover {
+  background: #2563eb;
+}
+
+.yellow-btn {
+  background: #fbbf24;
+  color: #1f2937;
+}
+
+.yellow-btn:hover {
+  background: #f59e0b;
+}
+
+.purple-btn {
+  background: #8b5cf6;
+  color: white;
+}
+
+.purple-btn:hover {
+  background: #7c3aed;
+}
+
+/* Procurement Dashboard Styles */
+.procurement-dashboard {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.no-orders {
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+}
+
+.orders-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.dashboard-stats {
+  display: flex;
+  gap: 20px;
+  justify-content: space-around;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid #e2e8f0;
+}
+
+.stat-card h4 {
+  margin: 0 0 8px 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.stat-number {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #10b981;
+}
+
+.orders-table-container {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.orders-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+
+.orders-table th,
+.orders-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.orders-table th {
+  background: #f8fafc;
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.orders-table td {
+  font-size: 0.875rem;
+  color: #1f2937;
+}
+
+.orders-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.duration-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.duration-badge.hourly {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.duration-badge.full-day {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.duration-badge.multi-day {
+  background: #ddd6fe;
+  color: #7c3aed;
+}
+
+.duration-badge.weekly {
+  background: #fce7f3;
+  color: #be185d;
+}
+
+.duration-days {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.item-name {
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.item-quantity {
+  font-weight: 600;
+  color: #059669;
+}
+
+.daily-quantity {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 400;
+}
+
+.item-notes {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-style: italic;
+  margin-top: 2px;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-badge.past {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.status-badge.today {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.status-badge.upcoming {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.orders-table tbody tr.past {
+  opacity: 0.7;
+}
+
+.orders-table tbody tr.today {
+  background: #fef3c7;
+}
+
+.orders-table tbody tr.upcoming {
+  background: #f0f9ff;
+}
+
+/* Modal header with download buttons */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 20px;
+  border-bottom: 1px solid #e2e8f0;
+  gap: 20px;
+}
+
+.modal-header .modal-title {
+  flex: 1;
+  margin: 0;
+}
+
+.modal-header .download-buttons {
+  flex: 0 0 auto;
+}
+
+.modal-header .modal-close {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .download-buttons {
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .download-btn {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+  }
+  
+  .modal-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .dashboard-stats {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .orders-table-container {
+    overflow-x: scroll;
+  }
+  
+  .orders-table {
+    min-width: 800px;
+  }
+}

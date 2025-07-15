@@ -1783,19 +1783,161 @@ const UserManagementModal = ({ users, rooms, onUpdateUsers, onCancel }) => {
 
 // Procurement Dashboard Component
 const ProcurementDashboard = ({ bookings, rooms, onClose }) => {
-  const orders = bookings
-    .filter(booking => booking.procurementOrders && booking.procurementOrders.length > 0)
-    .map(booking => ({
-      ...booking,
-      roomName: rooms.find(room => room.id === booking.roomId)?.name || 'Unknown Room',
-      procurementOrders: booking.procurementOrders.map(item => ({
-        ...item,
-        itemName: item.itemName || item.name || 'Unknown Item',
-        quantity: item.quantity || 1,
-        notes: item.notes || ''
+  const getAllProcurementOrders = () => {
+    return bookings
+      .filter(booking => booking.procurementOrders && booking.procurementOrders.length > 0)
+      .map(booking => ({
+        ...booking,
+        roomName: rooms.find(room => room.id === booking.roomId)?.name || 'Unknown Room',
+        // Normalize procurement orders data structure
+        procurementOrders: booking.procurementOrders.map(item => ({
+          ...item,
+          itemName: item.itemName || item.name || 'Unknown Item',
+          quantity: item.quantity || 1,
+          notes: item.notes || ''
+        })),
+        // Add booking duration info
+        duration: getBookingDuration(booking),
+        totalDays: getTotalBookingDays(booking)
       }))
-    }))
-    .sort((a, b) => new Date(a.date) - new Date(b.date));
+      .sort((a, b) => new Date(a.date || a.startDate) - new Date(b.date || b.startDate));
+  };
+
+  const getBookingDuration = (booking) => {
+    if (booking.bookingType === 'weekly') return 'Weekly';
+    if (booking.bookingType === 'multi-day') return 'Multi-day';
+    if (booking.bookingType === 'full-day') return 'Full day';
+    return 'Hourly';
+  };
+
+  const getTotalBookingDays = (booking) => {
+    if (booking.bookingType === 'weekly') return 7;
+    if (booking.bookingType === 'multi-day') {
+      const startDate = new Date(booking.startDate);
+      const endDate = new Date(booking.endDate);
+      const diffTime = Math.abs(endDate - startDate);
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    }
+    return 1;
+  };
+
+  const getTotalQuantity = (procurementOrders) => {
+    return procurementOrders.reduce((total, order) => total + order.quantity, 0);
+  };
+
+  const orders = getAllProcurementOrders();
+
+  // Download functions
+  const downloadPDF = (filterType = null) => {
+    const filteredOrders = filterType ? orders.filter(order => order.duration === filterType) : orders;
+    const printWindow = window.open('', '_blank');
+    const currentDate = new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    const pdfContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>ICPAC Procurement Orders Report${filterType ? ` - ${filterType}` : ''}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; }
+          .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #10b981; padding-bottom: 20px; }
+          .header h1 { color: #10b981; margin: 0; }
+          .header p { color: #6b7280; margin: 5px 0; }
+          .stats { display: flex; justify-content: space-around; margin: 20px 0; }
+          .stat { text-align: center; padding: 10px; background: #f8fafc; border-radius: 8px; }
+          .stat h3 { color: #10b981; margin: 0; font-size: 24px; }
+          .stat p { color: #374151; margin: 5px 0; font-size: 14px; }
+          .order { margin: 20px 0; padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px; }
+          .order-header { background: #f8fafc; padding: 10px; margin: -15px -15px 10px -15px; border-radius: 7px 7px 0 0; }
+          .order-title { font-weight: bold; color: #1f2937; margin: 0; }
+          .order-details { color: #6b7280; font-size: 14px; margin: 5px 0; }
+          .items { margin: 10px 0; }
+          .item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #f3f4f6; }
+          .item:last-child { border-bottom: none; }
+          .status { padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+          .status.past { background: #fee2e2; color: #dc2626; }
+          .status.today { background: #fef3c7; color: #d97706; }
+          .status.upcoming { background: #dbeafe; color: #2563eb; }
+          .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #6b7280; font-size: 12px; }
+          @media print {
+            body { margin: 0; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>ICPAC Procurement Orders Report${filterType ? ` - ${filterType}` : ''}</h1>
+          <p>Generated on ${currentDate}</p>
+          <p>IGAD Climate Prediction and Applications Centre</p>
+        </div>
+        
+        <div class="stats">
+          <div class="stat">
+            <h3>${filteredOrders.length}</h3>
+            <p>Total Orders</p>
+          </div>
+          <div class="stat">
+            <h3>${filteredOrders.reduce((total, order) => total + getTotalQuantity(order.procurementOrders), 0)}</h3>
+            <p>Total Items</p>
+          </div>
+          <div class="stat">
+            <h3>${filteredOrders.filter(order => getOrderStatus(order).status === 'Today').length}</h3>
+            <p>Today's Orders</p>
+          </div>
+        </div>
+
+        ${filteredOrders.map(order => {
+          const status = getOrderStatus(order);
+          return `
+            <div class="order">
+              <div class="order-header">
+                <div class="order-title">${order.title}</div>
+                <div class="order-details">
+                  <strong>Organizer:</strong> ${order.organizer} | 
+                  <strong>Date:</strong> ${formatDate(order.date || order.startDate)} | 
+                  <strong>Time:</strong> ${formatTime(order.time || order.startTime)} | 
+                  ${order.endDate ? `<strong>End Date:</strong> ${formatDate(order.endDate)} | ` : ''}
+                  <strong>Duration:</strong> ${order.duration} ${order.totalDays > 1 ? `(${order.totalDays} days)` : ''} | 
+                  <strong>Room:</strong> ${order.roomName} | 
+                  <strong>Attendees:</strong> ${order.attendeeCount || 1}
+                  <span class="status ${status.className}">${status.status}</span>
+                </div>
+              </div>
+              <div class="items">
+                <strong>Items Required:</strong>
+                ${order.procurementOrders.map(item => {
+                  const dailyQuantity = item.quantity;
+                  const totalQuantity = dailyQuantity * order.totalDays;
+                  return `
+                    <div class="item">
+                      <span>${item.itemName}</span>
+                      <span><strong>×${totalQuantity}${order.totalDays > 1 ? ` (${dailyQuantity}/day)` : ''}</strong></span>
+                    </div>
+                    ${item.notes ? `<div style="font-size: 12px; color: #6b7280; margin-left: 10px;">Note: ${item.notes}</div>` : ''}
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          `;
+        }).join('')}
+
+        <div class="footer">
+          <p>This report was generated automatically by the ICPAC Boardroom System</p>
+          <p>For questions, contact: admin@icpac.net</p>
+        </div>
+      </body>
+      </html>
+    `;
+    
+    printWindow.document.write(pdfContent);
+    printWindow.document.close();
+    printWindow.print();
+  };
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -1834,6 +1976,41 @@ const ProcurementDashboard = ({ bookings, rooms, onClose }) => {
       <div className="modal-content large">
         <div className="modal-header">
           <h2 className="modal-title">Procurement Orders Dashboard</h2>
+          <div className="download-buttons">
+            <div className="download-section">
+              <h4>Download Orders</h4>
+              <div className="download-group">
+                <button onClick={() => downloadPDF()} className="download-btn pdf-btn" title="Download all orders as PDF">
+                  📄 All Orders PDF
+                </button>
+                
+                {/* Duration-specific downloads - only show if orders exist for that type */}
+                {orders.some(order => order.duration === 'Hourly') && (
+                  <button onClick={() => downloadPDF('Hourly')} className="download-btn green-btn duration-btn" title="Download hourly orders as PDF">
+                    📄 Hourly Orders
+                  </button>
+                )}
+                
+                {orders.some(order => order.duration === 'Full day') && (
+                  <button onClick={() => downloadPDF('Full day')} className="download-btn blue-btn duration-btn" title="Download full day orders as PDF">
+                    📄 Full Day Orders
+                  </button>
+                )}
+                
+                {orders.some(order => order.duration === 'Multi-day') && (
+                  <button onClick={() => downloadPDF('Multi-day')} className="download-btn yellow-btn duration-btn" title="Download multi-day orders as PDF">
+                    📄 Multi-day Orders
+                  </button>
+                )}
+                
+                {orders.some(order => order.duration === 'Weekly') && (
+                  <button onClick={() => downloadPDF('Weekly')} className="download-btn purple-btn duration-btn" title="Download weekly orders as PDF">
+                    📄 Weekly Orders
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
           <button onClick={onClose} className="modal-close">×</button>
         </div>
 
@@ -1870,6 +2047,7 @@ const ProcurementDashboard = ({ bookings, rooms, onClose }) => {
                     <tr>
                       <th>Date</th>
                       <th>Time</th>
+                      <th>Duration</th>
                       <th>Meeting</th>
                       <th>Organizer</th>
                       <th>Room</th>
@@ -1883,23 +2061,40 @@ const ProcurementDashboard = ({ bookings, rooms, onClose }) => {
                       const orderStatus = getOrderStatus(order);
                       return (
                         <tr key={order.id} className={orderStatus.className}>
-                          <td>{formatDate(order.date)}</td>
-                          <td>{formatTime(order.time)}</td>
+                          <td>{formatDate(order.date || order.startDate)}</td>
+                          <td>{formatTime(order.time || order.startTime)}</td>
+                          <td>
+                            <span className={`duration-badge ${order.duration.toLowerCase().replace(' ', '-')}`}>
+                              {order.duration}
+                            </span>
+                            {order.totalDays > 1 && (
+                              <div className="duration-days">({order.totalDays} days)</div>
+                            )}
+                          </td>
                           <td>{order.title}</td>
                           <td>{order.organizer}</td>
                           <td>{order.roomName}</td>
                           <td>{order.attendeeCount || 1}</td>
                           <td>
                             <div className="items-list">
-                              {order.procurementOrders.map((item, index) => (
-                                <div key={index} className="item-row">
-                                  <span className="item-name">{item.itemName}</span>
-                                  <span className="item-quantity">×{item.quantity}</span>
-                                  {item.notes && (
-                                    <div className="item-notes">{item.notes}</div>
-                                  )}
-                                </div>
-                              ))}
+                              {order.procurementOrders.map((item, index) => {
+                                const dailyQuantity = item.quantity;
+                                const totalQuantity = dailyQuantity * order.totalDays;
+                                return (
+                                  <div key={index} className="item-row">
+                                    <span className="item-name">{item.itemName}</span>
+                                    <span className="item-quantity">
+                                      ×{totalQuantity}
+                                      {order.totalDays > 1 && (
+                                        <span className="daily-quantity"> ({dailyQuantity}/day)</span>
+                                      )}
+                                    </span>
+                                    {item.notes && (
+                                      <div className="item-notes">{item.notes}</div>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
                           </td>
                           <td>
