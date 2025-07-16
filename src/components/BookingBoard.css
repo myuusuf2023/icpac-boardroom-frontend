@@ -12,7 +12,7 @@
 
 /* Header Styles */
 .booking-header {
-  background: white;
+  background: #065f46;
   border-radius: 16px;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   padding: 24px;
@@ -21,42 +21,48 @@
 
 .booking-title {
   font-size: 2.25rem;
-  font-weight: 700;
-  color: #10b981;
+  font-weight: 900;
+  color: white;
   margin: 0 0 8px 0;
+  letter-spacing: 1px;
 }
 
 .booking-subtitle {
-  color: #6b7280;
+  color: #d1fae5;
   margin: 0;
 }
 
 /* Header Layout Styles */
-.header-content {
+.header-title-row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: center;
   width: 100%;
+  gap: 24px;
 }
 
 .title-section {
   flex: 1;
+  text-align: center;
 }
 
 .logo-section {
   flex-shrink: 0;
-  margin-right: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .icpac-logo {
   height: 60px;
   width: auto;
   object-fit: contain;
+  max-width: 200px;
 }
 
 /* Date Selector Styles */
 .date-section {
-  background: white;
+  background: #065f46;
   border-radius: 16px;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   padding: 18px;
@@ -73,7 +79,7 @@
 .date-title {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #1f2937;
+  color: white;
   margin: 0;
 }
 
@@ -100,8 +106,8 @@
 }
 
 .admin-login-btn {
-  background: #3b82f6;
-  color: white;
+  background: #fbbf24;
+  color: #1f2937;
   border: none;
   padding: 6px 12px;
   border-radius: 4px;
@@ -111,7 +117,7 @@
 }
 
 .admin-login-btn:hover {
-  background: #2563eb;
+  background: #f59e0b;
 }
 
 .admin-logout-btn {
@@ -365,15 +371,15 @@
 .date-picker-section {
   margin-bottom: 24px;
   padding: 16px;
-  background: #f8fafc;
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .date-picker-label {
   display: block;
   font-weight: 500;
-  color: #374151;
+  color: white;
   margin-bottom: 8px;
   font-size: 0.875rem;
 }
@@ -396,7 +402,7 @@
 
 .quick-dates-label {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: #d1fae5;
   margin: 0 0 12px 0;
   font-weight: 500;
 }
@@ -419,18 +425,18 @@
 }
 
 .date-button:not(.selected) {
-  background: #f3f4f6;
-  color: #374151;
+  background: #fbbf24;
+  color: #1f2937;
 }
 
 .date-button:not(.selected):hover {
-  background: #e5e7eb;
+  background: #f59e0b;
 }
 
 .date-button.selected {
-  background: #3b82f6;
+  background: #d97706;
   color: white;
-  box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.39);
+  box-shadow: 0 4px 14px 0 rgba(217, 119, 6, 0.39);
   transform: scale(1.05);
 }
 
@@ -455,7 +461,7 @@
 
 .grid-header {
   padding: 18px;
-  background: linear-gradient(90deg, #3b82f6 0%, #4338ca 100%);
+  background: #d97706;
 }
 
 .grid-header h2 {
@@ -868,6 +874,20 @@
     font-size: 1.875rem;
   }
   
+  .header-title-row {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+  }
+  
+  .title-section {
+    text-align: center;
+  }
+  
+  .icpac-logo {
+    height: 50px;
+  }
+  
   .date-title {
     font-size: 1.25rem;
   }
@@ -917,6 +937,10 @@
   .slot-title,
   .slot-subtitle {
     font-size: 0.6rem;
+  }
+  
+  .icpac-logo {
+    height: 45px;
   }
   
   .procurement-grid {
@@ -1130,7 +1154,7 @@
 
 /* Footer Styles */
 .booking-footer {
-  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+  background: #065f46;
   color: white;
   margin-top: 48px;
   border-radius: 16px;
@@ -1146,14 +1170,14 @@
 }
 
 .footer-section h4 {
-  color: #10b981;
+  color: #d1fae5;
   margin-bottom: 16px;
   font-size: 1.125rem;
   font-weight: 600;
 }
 
 .footer-section h3 {
-  color: #10b981;
+  color: #d1fae5;
   margin: 0 0 8px 0;
   font-size: 1.25rem;
   font-weight: 600;
@@ -1169,10 +1193,11 @@
   width: 60px;
   height: 60px;
   object-fit: contain;
+  max-width: 100px;
 }
 
 .footer-text p {
-  color: #d1d5db;
+  color: white;
   margin: 0;
   font-size: 0.875rem;
 }
@@ -1188,34 +1213,34 @@
 }
 
 .footer-links a {
-  color: #d1d5db;
+  color: white;
   text-decoration: none;
   transition: color 0.2s ease;
   cursor: pointer;
 }
 
 .footer-links a:hover {
-  color: #10b981;
+  color: #d1fae5;
 }
 
 .contact-info p {
   margin: 4px 0;
-  color: #d1d5db;
+  color: white;
   font-size: 0.875rem;
 }
 
 .contact-info strong {
-  color: #10b981;
+  color: #d1fae5;
 }
 
 .system-stats p {
   margin: 4px 0;
-  color: #d1d5db;
+  color: white;
   font-size: 0.875rem;
 }
 
 .footer-bottom {
-  background: rgba(0, 0, 0, 0.3);
+  background: #047857;
   padding: 20px 30px;
   text-align: center;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -1223,7 +1248,7 @@
 
 .footer-bottom p {
   margin: 0;
-  color: #9ca3af;
+  color: white;
   font-size: 0.875rem;
 }
 

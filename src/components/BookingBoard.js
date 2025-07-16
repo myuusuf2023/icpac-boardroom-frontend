@@ -69,24 +69,24 @@ const BookingBoard = () => {
   const shouldShowBookingInterface = (date) => {
     const now = new Date();
     const selectedDateObj = new Date(date);
-    
+
     // Set both dates to start of day for comparison
     const today = new Date(now);
     today.setHours(0, 0, 0, 0);
-    
+
     const selectedDay = new Date(selectedDateObj);
     selectedDay.setHours(0, 0, 0, 0);
-    
+
     // Hide interface for past dates completely
     if (selectedDay < today) {
       return false;
     }
-    
+
     // For future dates, always show
     if (selectedDay > today) {
       return true;
     }
-    
+
     // For today, show bookings only if it's before 18:00 (6 PM)
     const currentHour = now.getHours();
     return currentHour < 18;
@@ -276,12 +276,12 @@ const BookingBoard = () => {
   useEffect(() => {
     // Set up rooms
     setRooms([
-      { id: 1, name: 'Conference Room - Ground Floor', capacity: 100, amenities: ['Projector', 'Whiteboard', 'Video Conferencing', 'Audio System'] },
-      { id: 2, name: 'Big Conference Room - First Floor', capacity: 50, amenities: ['Projector', 'Whiteboard', 'Video Conferencing', 'Audio System'] },
-      { id: 3, name: 'Boardroom - 1st Floor', capacity: 8, amenities: ['TV Screen', 'Whiteboard'] },
-      { id: 4, name: 'Situation Room', capacity: 12, amenities: ['Screen'] },
-      { id: 5, name: 'Computer Lab 1 - Underground', capacity: 25, amenities: ['Computers', 'Projector', 'Whiteboard', 'Internet Access', 'Printers'] },
-      { id: 6, name: 'Computer Lab 2 - First Floor', capacity: 25, amenities: ['Computers', 'Projector', 'Whiteboard', 'Internet Access', 'Printers'] },
+      { id: 1, name: 'Conference Room - Ground Floor', capacity: 200, amenities: ['Projector', 'Whiteboard', 'Video Conferencing', 'Audio System'] },
+      { id: 2, name: 'Boardroom - First Floor', capacity: 25, amenities: ['Projector', 'Whiteboard', 'Video Conferencing', 'Audio System'] },
+      { id: 3, name: 'SmallBoardroom - 1st Floor', capacity: 12, amenities: ['TV Screen', 'Whiteboard'] },
+      { id: 4, name: 'Situation Room', capacity: 8, amenities: ['Screen'] },
+      { id: 5, name: 'Computer Lab 1 - Underground', capacity: 20, amenities: ['Computers', 'Projector', 'Whiteboard', 'Internet Access', 'Printers'] },
+      { id: 6, name: 'Computer Lab 2 - First Floor', capacity: 20, amenities: ['Computers', 'Projector', 'Whiteboard', 'Internet Access', 'Printers'] },
     ]);
 
     // Load bookings from localStorage or use default
@@ -508,12 +508,12 @@ const BookingBoard = () => {
       <div className="booking-wrapper">
         {/* Header */}
         <div className="booking-header">
-          <div className="header-content">
+          <div className="header-title-row">
             <div className="logo-section">
-              <img src="/icpaclogo.png" alt="ICPAC Logo" className="icpac-logo" />
+              <img src="/ICPAC_Website_Header_Logo.svg" alt="ICPAC Logo" className="icpac-logo" />
             </div>
             <div className="title-section">
-              <h1 className="booking-title">Icpac Boardroom Booking System</h1>
+              <h1 className="booking-title">ICPAC MEETING BOOKING SYSTEM</h1>
               <p className="booking-subtitle">Reserve your meeting space with ease</p>
             </div>
           </div>
@@ -531,7 +531,7 @@ const BookingBoard = () => {
                     <span className={`role-badge role-${currentUser.role}`}>
                       {currentUser.role === 'super_admin' ? 'Super Admin' :
                         currentUser.role === 'room_admin' ? 'Room Admin' :
-                        currentUser.role === 'procurement_officer' ? 'Procurement Officer' : 'User'}
+                          currentUser.role === 'procurement_officer' ? 'Procurement Officer' : 'User'}
                     </span>
                   </span>
                   {currentUser.role === 'super_admin' && (
@@ -656,84 +656,84 @@ const BookingBoard = () => {
                     </tr>
                   ) : (
                     getVisibleRooms().map(room => (
-                    <tr key={room.id}>
-                      <td>
-                        <div className="room-info">
-                          <h3 className="room-name">{room.name}</h3>
-                          <p className="room-capacity">Capacity: {room.capacity} people</p>
-                          <div className="room-amenities">
-                            {room.amenities.map(amenity => (
-                              <span key={amenity} className="amenity-tag">
-                                {amenity}
-                              </span>
-                            ))}
+                      <tr key={room.id}>
+                        <td>
+                          <div className="room-info">
+                            <h3 className="room-name">{room.name}</h3>
+                            <p className="room-capacity">Capacity: {room.capacity} people</p>
+                            <div className="room-amenities">
+                              {room.amenities.map(amenity => (
+                                <span key={amenity} className="amenity-tag">
+                                  {amenity}
+                                </span>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      {timeSlots.map(time => {
-                        const isBooked = isSlotBooked(room.id, time);
-                        const booking = getBookingDetails(room.id, time);
-                        const isPast = isTimeSlotInPast(selectedDate, time);
+                        </td>
+                        {timeSlots.map(time => {
+                          const isBooked = isSlotBooked(room.id, time);
+                          const booking = getBookingDetails(room.id, time);
+                          const isPast = isTimeSlotInPast(selectedDate, time);
 
-                        return (
-                          <td key={time}>
-                            {isBooked && isPast ? (
-                              <div className="time-slot past">
-                                <div className="slot-title">Past</div>
-                                <div className="slot-subtitle">{booking.title}</div>
-                              </div>
-                            ) : isBooked ? (
-                              <div className={`time-slot booked ${booking.bookingType || 'hourly'}`}>
-                                <div className="slot-title">{booking.title}</div>
-                                <div className="slot-subtitle">{booking.organizer}</div>
-                                {booking.bookingType !== 'hourly' && (
-                                  <div className="slot-duration">
-                                    {booking.bookingType === 'full-day' ? 'Full Day' :
-                                      booking.bookingType === 'weekly' ? 'Weekly' :
-                                        booking.bookingType === 'multi-day' ?
-                                          `${new Date(booking.startDate).toLocaleDateString()} - ${new Date(booking.endDate).toLocaleDateString()}` :
-                                          'Extended'}
-                                  </div>
-                                )}
-                                {canManageBooking(booking) && (
-                                  <div className="admin-booking-controls">
-                                    <button
-                                      onClick={() => editBooking(booking)}
-                                      className="edit-booking-btn"
-                                      title="Edit this booking"
-                                    >
-                                      Edit
-                                    </button>
-                                    <button
-                                      onClick={() => cancelBooking(booking.id)}
-                                      className="cancel-booking-btn"
-                                      title="Cancel this booking"
-                                    >
-                                      Cancel
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            ) : isPast ? (
-                              <div className="time-slot past">
-                                <div className="slot-title">Past</div>
-                                <div className="slot-subtitle">Cannot book</div>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => handleBooking(room, time)}
-                                className="time-slot available"
-                              >
-                                <div className="slot-title">Available</div>
-                                <div className="slot-subtitle">Click to book</div>
-                              </button>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))
-                )}
+                          return (
+                            <td key={time}>
+                              {isBooked && isPast ? (
+                                <div className="time-slot past">
+                                  <div className="slot-title">Past</div>
+                                  <div className="slot-subtitle">{booking.title}</div>
+                                </div>
+                              ) : isBooked ? (
+                                <div className={`time-slot booked ${booking.bookingType || 'hourly'}`}>
+                                  <div className="slot-title">{booking.title}</div>
+                                  <div className="slot-subtitle">{booking.organizer}</div>
+                                  {booking.bookingType !== 'hourly' && (
+                                    <div className="slot-duration">
+                                      {booking.bookingType === 'full-day' ? 'Full Day' :
+                                        booking.bookingType === 'weekly' ? 'Weekly' :
+                                          booking.bookingType === 'multi-day' ?
+                                            `${new Date(booking.startDate).toLocaleDateString()} - ${new Date(booking.endDate).toLocaleDateString()}` :
+                                            'Extended'}
+                                    </div>
+                                  )}
+                                  {canManageBooking(booking) && (
+                                    <div className="admin-booking-controls">
+                                      <button
+                                        onClick={() => editBooking(booking)}
+                                        className="edit-booking-btn"
+                                        title="Edit this booking"
+                                      >
+                                        Edit
+                                      </button>
+                                      <button
+                                        onClick={() => cancelBooking(booking.id)}
+                                        className="cancel-booking-btn"
+                                        title="Cancel this booking"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : isPast ? (
+                                <div className="time-slot past">
+                                  <div className="slot-title">Past</div>
+                                  <div className="slot-subtitle">Cannot book</div>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => handleBooking(room, time)}
+                                  className="time-slot available"
+                                >
+                                  <div className="slot-title">Available</div>
+                                  <div className="slot-subtitle">Click to book</div>
+                                </button>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -747,7 +747,7 @@ const BookingBoard = () => {
                   today.setHours(0, 0, 0, 0);
                   const selectedDay = new Date(selectedDateObj);
                   selectedDay.setHours(0, 0, 0, 0);
-                  
+
                   if (selectedDay < today) {
                     // Past date
                     return (
@@ -837,7 +837,7 @@ const BookingBoard = () => {
           <div className="footer-content">
             <div className="footer-section">
               <div className="footer-logo">
-                <img src="/icpaclogo.png" alt="ICPAC Logo" className="footer-logo-img" />
+                <img src="/ICPAC_Website_Header_Logo.svg" alt="ICPAC Logo" className="footer-logo-img" />
                 <div className="footer-text">
                   <h3>ICPAC Boardroom System</h3>
                   <p>Streamlining meeting room reservations</p>
@@ -1803,7 +1803,7 @@ const UserManagementModal = ({ users, rooms, onUpdateUsers, onCancel }) => {
                       <span className={`role-badge role-${user.role}`}>
                         {user.role === 'super_admin' ? 'Super Admin' :
                           user.role === 'room_admin' ? 'Room Admin' :
-                          user.role === 'procurement_officer' ? 'Procurement Officer' : 'User'}
+                            user.role === 'procurement_officer' ? 'Procurement Officer' : 'User'}
                       </span>
                     </td>
                     <td>{user.managedRooms ? getRoomNames(user.managedRooms) : 'None'}</td>
@@ -1890,17 +1890,17 @@ const ProcurementDashboard = ({ bookings, rooms, onClose }) => {
   console.log('Procurement Orders:', orders);
   console.log('Orders length:', orders.length);
   console.log('Sample order:', orders[0]);
-  
+
   // Calculate stats with debugging
   const totalOrders = orders.length || 0;
-  
+
   // Fix total items calculation - sum up all quantities, not just count items
   const totalItems = orders.reduce((total, order) => {
     if (!order.procurementOrders || !Array.isArray(order.procurementOrders)) {
       console.log(`Order ${order.id}: No procurement orders`);
       return total;
     }
-    
+
     const orderTotal = order.procurementOrders.reduce((orderSum, item) => {
       const quantity = parseInt(item.quantity) || 0;
       const days = order.totalDays || 1;
@@ -1908,11 +1908,11 @@ const ProcurementDashboard = ({ bookings, rooms, onClose }) => {
       console.log(`Item ${item.itemName}: ${quantity} × ${days} days = ${itemTotal}`);
       return orderSum + itemTotal;
     }, 0);
-    
+
     console.log(`Order ${order.id}: ${orderTotal} total items`);
     return total + orderTotal;
   }, 0);
-  
+
   console.log('Total Orders:', totalOrders);
   console.log('Total Items:', totalItems);
 
@@ -1972,33 +1972,33 @@ const ProcurementDashboard = ({ bookings, rooms, onClose }) => {
           </div>
           <div class="stat">
             <h3>${filteredOrders.reduce((total, order) => {
-              if (!order.procurementOrders || !Array.isArray(order.procurementOrders)) {
-                return total;
-              }
-              const orderTotal = order.procurementOrders.reduce((orderSum, item) => {
-                const quantity = parseInt(item.quantity) || 0;
-                const days = order.totalDays || 1;
-                return orderSum + (quantity * days);
-              }, 0);
-              return total + orderTotal;
-            }, 0)}</h3>
+      if (!order.procurementOrders || !Array.isArray(order.procurementOrders)) {
+        return total;
+      }
+      const orderTotal = order.procurementOrders.reduce((orderSum, item) => {
+        const quantity = parseInt(item.quantity) || 0;
+        const days = order.totalDays || 1;
+        return orderSum + (quantity * days);
+      }, 0);
+      return total + orderTotal;
+    }, 0)}</h3>
             <p>Total Items</p>
           </div>
           <div class="stat">
             <h3>${filteredOrders.filter(order => {
-              try {
-                return getOrderStatus(order).status === 'Today';
-              } catch (e) {
-                return false;
-              }
-            }).length}</h3>
+      try {
+        return getOrderStatus(order).status === 'Today';
+      } catch (e) {
+        return false;
+      }
+    }).length}</h3>
             <p>Today's Orders</p>
           </div>
         </div>
 
         ${filteredOrders.map(order => {
-          const status = getOrderStatus(order);
-          return `
+      const status = getOrderStatus(order);
+      return `
             <div class="order">
               <div class="order-header">
                 <div class="order-title">${order.title}</div>
@@ -2016,20 +2016,20 @@ const ProcurementDashboard = ({ bookings, rooms, onClose }) => {
               <div class="items">
                 <strong>Items Required:</strong>
                 ${order.procurementOrders.map(item => {
-                  const dailyQuantity = item.quantity;
-                  const totalQuantity = dailyQuantity * order.totalDays;
-                  return `
+        const dailyQuantity = item.quantity;
+        const totalQuantity = dailyQuantity * order.totalDays;
+        return `
                     <div class="item">
                       <span>${item.itemName}</span>
                       <span><strong>×${totalQuantity}${order.totalDays > 1 ? ` (${dailyQuantity}/day)` : ''}</strong></span>
                     </div>
                     ${item.notes ? `<div style="font-size: 12px; color: #6b7280; margin-left: 10px;">Note: ${item.notes}</div>` : ''}
                   `;
-                }).join('')}
+      }).join('')}
               </div>
             </div>
           `;
-        }).join('')}
+    }).join('')}
 
         <div class="footer">
           <p>This report was generated automatically by the ICPAC Boardroom System</p>
@@ -2038,7 +2038,7 @@ const ProcurementDashboard = ({ bookings, rooms, onClose }) => {
       </body>
       </html>
     `;
-    
+
     printWindow.document.write(pdfContent);
     printWindow.document.close();
     printWindow.print();
@@ -2064,27 +2064,27 @@ const ProcurementDashboard = ({ bookings, rooms, onClose }) => {
   const getOrderStatus = (order) => {
     const orderDate = new Date(order.date || order.startDate);
     const orderTime = order.time || order.startTime;
-    
+
     // Create full datetime for the order
     const orderDateTime = new Date(orderDate);
     const [hours, minutes] = orderTime.split(':');
     orderDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-    
+
     // Calculate time difference in hours
     const currentTime = new Date();
     const timeDifferenceHours = (currentTime - orderDateTime) / (1000 * 60 * 60);
-    
+
     // Check if order is declined (2+ hours past)
     if (timeDifferenceHours >= 2) {
       return { status: 'Declined', className: 'declined' };
     }
-    
+
     // Check if order date is in the past
     const todayDate = new Date();
     todayDate.setHours(0, 0, 0, 0);
     const orderDateOnly = new Date(orderDate);
     orderDateOnly.setHours(0, 0, 0, 0);
-    
+
     if (orderDateOnly < todayDate) {
       return { status: 'Past', className: 'past' };
     } else if (orderDateOnly.getTime() === todayDate.getTime()) {
@@ -2111,26 +2111,26 @@ const ProcurementDashboard = ({ bookings, rooms, onClose }) => {
                 <button onClick={() => downloadPDF()} className="download-btn pdf-btn" title="Download all orders as PDF">
                   📄 All Orders PDF
                 </button>
-                
+
                 {/* Duration-specific downloads - only show if orders exist for that type */}
                 {orders.some(order => order.duration === 'Hourly') && (
                   <button onClick={() => downloadPDF('Hourly')} className="download-btn green-btn duration-btn" title="Download hourly orders as PDF">
                     📄 Hourly Orders
                   </button>
                 )}
-                
+
                 {orders.some(order => order.duration === 'Full day') && (
                   <button onClick={() => downloadPDF('Full day')} className="download-btn blue-btn duration-btn" title="Download full day orders as PDF">
                     📄 Full Day Orders
                   </button>
                 )}
-                
+
                 {orders.some(order => order.duration === 'Multi-day') && (
                   <button onClick={() => downloadPDF('Multi-day')} className="download-btn yellow-btn duration-btn" title="Download multi-day orders as PDF">
                     📄 Multi-day Orders
                   </button>
                 )}
-                
+
                 {orders.some(order => order.duration === 'Weekly') && (
                   <button onClick={() => downloadPDF('Weekly')} className="download-btn purple-btn duration-btn" title="Download weekly orders as PDF">
                     📄 Weekly Orders
