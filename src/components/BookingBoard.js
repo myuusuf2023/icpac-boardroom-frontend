@@ -87,9 +87,9 @@ const BookingBoard = () => {
       return true;
     }
 
-    // For today, show bookings only if it's before 18:00 (6 PM)
+    // For today, show bookings only if it's before 16:00 (4 PM)
     const currentHour = now.getHours();
-    return currentHour < 18;
+    return currentHour < 16;
   };
 
   const handleAdminLogin = (password) => {
@@ -190,6 +190,73 @@ const BookingBoard = () => {
     return rooms;
   };
 
+  const getGroupedRooms = () => {
+    const visibleRooms = getVisibleRooms();
+    return visibleRooms.reduce((groups, room) => {
+      const category = room.category || 'other';
+      if (!groups[category]) {
+        groups[category] = [];
+      }
+      groups[category].push(room);
+      return groups;
+    }, {});
+  };
+
+  const getCategoryInfo = (category) => {
+    const categoryConfig = {
+      conference: {
+        label: 'Meeting Spaces',
+        color: '#10b981',
+        icon: '🏛️'
+      },
+      computer_lab: {
+        label: 'Computer Labs',
+        color: '#3b82f6',
+        icon: '💻'
+      },
+      special: {
+        label: 'Special Rooms',
+        color: '#f59e0b',
+        icon: '⚡'
+      },
+      other: {
+        label: 'Other Rooms',
+        color: '#6b7280',
+        icon: '🏢'
+      }
+    };
+    return categoryConfig[category] || categoryConfig.other;
+  };
+
+  const getAmenityIcon = (amenity) => {
+    const amenityIcons = {
+      'Projector': '📽️',
+      'Whiteboard': '📝',
+      'Video Conferencing': '📹',
+      'Audio System': '🎤',
+      'TV Screen': '📺',
+      'Screen': '🖥️',
+      'Computers': '💻',
+      'Internet Access': '🌐',
+      'Printers': '🖨️'
+    };
+    return amenityIcons[amenity] || '🔧';
+  };
+
+  const getCapacityLevel = (capacity) => {
+    if (capacity <= 10) return 'small';
+    if (capacity <= 25) return 'medium';
+    if (capacity <= 50) return 'large';
+    return 'extra-large';
+  };
+
+  const getCapacityColor = (capacity) => {
+    if (capacity <= 10) return '#f59e0b';
+    if (capacity <= 25) return '#10b981';
+    if (capacity <= 50) return '#3b82f6';
+    return '#8b5cf6';
+  };
+
   const canManageBooking = (booking) => {
     if (!currentUser) return false;
     if (currentUser.role === 'super_admin') return true;
@@ -274,14 +341,14 @@ const BookingBoard = () => {
 
   // Initialize data
   useEffect(() => {
-    // Set up rooms
+    // Set up rooms with categories
     setRooms([
-      { id: 1, name: 'Conference Room - Ground Floor', capacity: 200, amenities: ['Projector', 'Whiteboard', 'Video Conferencing', 'Audio System'] },
-      { id: 2, name: 'Boardroom - First Floor', capacity: 25, amenities: ['Projector', 'Whiteboard', 'Video Conferencing', 'Audio System'] },
-      { id: 3, name: 'SmallBoardroom - 1st Floor', capacity: 12, amenities: ['TV Screen', 'Whiteboard'] },
-      { id: 4, name: 'Situation Room', capacity: 8, amenities: ['Screen'] },
-      { id: 5, name: 'Computer Lab 1 - Underground', capacity: 20, amenities: ['Computers', 'Projector', 'Whiteboard', 'Internet Access', 'Printers'] },
-      { id: 6, name: 'Computer Lab 2 - First Floor', capacity: 20, amenities: ['Computers', 'Projector', 'Whiteboard', 'Internet Access', 'Printers'] },
+      { id: 1, name: 'Conference Room - Ground Floor', capacity: 200, category: 'conference', amenities: ['Projector', 'Whiteboard', 'Video Conferencing', 'Audio System'] },
+      { id: 2, name: 'Boardroom - First Floor', capacity: 25, category: 'conference', amenities: ['Projector', 'Whiteboard', 'Video Conferencing'] },
+      { id: 3, name: 'SmallBoardroom - 1st Floor', capacity: 12, category: 'conference', amenities: ['TV Screen', 'Whiteboard'] },
+      { id: 4, name: 'Situation Room', capacity: 8, category: 'special', amenities: ['Screen'] },
+      { id: 5, name: 'Computer Lab 1 - Underground', capacity: 20, category: 'computer_lab', amenities: ['Computers', 'Projector', 'Whiteboard', 'Internet Access', 'Printers'] },
+      { id: 6, name: 'Computer Lab 2 - First Floor', capacity: 20, category: 'computer_lab', amenities: ['Computers', 'Projector', 'Whiteboard', 'Internet Access', 'Printers'] },
     ]);
 
     // Load bookings from localStorage or use default
@@ -304,7 +371,7 @@ const BookingBoard = () => {
 
   const timeSlots = [
     '08:00', '09:00', '10:00', '11:00', '12:00', '13:00',
-    '14:00', '15:00', '16:00', '17:00', '18:00'
+    '14:00', '15:00', '16:00'
   ];
 
   const formatDate = (date) => {
@@ -655,84 +722,118 @@ const BookingBoard = () => {
                       </td>
                     </tr>
                   ) : (
-                    getVisibleRooms().map(room => (
-                      <tr key={room.id}>
-                        <td>
-                          <div className="room-info">
-                            <h3 className="room-name">{room.name}</h3>
-                            <p className="room-capacity">Capacity: {room.capacity} people</p>
-                            <div className="room-amenities">
-                              {room.amenities.map(amenity => (
-                                <span key={amenity} className="amenity-tag">
-                                  {amenity}
-                                </span>
-                              ))}
-                            </div>
+                    <>
+                      <tr className="category-header">
+                        <td colSpan={timeSlots.length + 1}>
+                          <div className="category-title" style={{ borderLeftColor: '#10b981' }}>
+                            <span className="category-icon">🏢</span>
+                            <span className="category-label">All Meeting Rooms</span>
+                            <span className="category-count">({getVisibleRooms().length} room{getVisibleRooms().length !== 1 ? 's' : ''})</span>
                           </div>
                         </td>
-                        {timeSlots.map(time => {
-                          const isBooked = isSlotBooked(room.id, time);
-                          const booking = getBookingDetails(room.id, time);
-                          const isPast = isTimeSlotInPast(selectedDate, time);
-
-                          return (
-                            <td key={time}>
-                              {isBooked && isPast ? (
-                                <div className="time-slot past">
-                                  <div className="slot-title">Past</div>
-                                  <div className="slot-subtitle">{booking.title}</div>
-                                </div>
-                              ) : isBooked ? (
-                                <div className={`time-slot booked ${booking.bookingType || 'hourly'}`}>
-                                  <div className="slot-title">{booking.title}</div>
-                                  <div className="slot-subtitle">{booking.organizer}</div>
-                                  {booking.bookingType !== 'hourly' && (
-                                    <div className="slot-duration">
-                                      {booking.bookingType === 'full-day' ? 'Full Day' :
-                                        booking.bookingType === 'weekly' ? 'Weekly' :
-                                          booking.bookingType === 'multi-day' ?
-                                            `${new Date(booking.startDate).toLocaleDateString()} - ${new Date(booking.endDate).toLocaleDateString()}` :
-                                            'Extended'}
-                                    </div>
-                                  )}
-                                  {canManageBooking(booking) && (
-                                    <div className="admin-booking-controls">
-                                      <button
-                                        onClick={() => editBooking(booking)}
-                                        className="edit-booking-btn"
-                                        title="Edit this booking"
-                                      >
-                                        Edit
-                                      </button>
-                                      <button
-                                        onClick={() => cancelBooking(booking.id)}
-                                        className="cancel-booking-btn"
-                                        title="Cancel this booking"
-                                      >
-                                        Cancel
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                              ) : isPast ? (
-                                <div className="time-slot past">
-                                  <div className="slot-title">Past</div>
-                                  <div className="slot-subtitle">Cannot book</div>
-                                </div>
-                              ) : (
-                                <button
-                                  onClick={() => handleBooking(room, time)}
-                                  className="time-slot available"
-                                >
-                                  <div className="slot-title">Available</div>
-                                  <div className="slot-subtitle">Click to book</div>
-                                </button>
-                              )}
-                            </td>
-                          );
-                        })}
                       </tr>
-                    ))
+                      {getVisibleRooms().map(room => {
+                        const categoryInfo = getCategoryInfo(room.category);
+                        return (
+                          <tr key={room.id} className="room-row">
+                            <td>
+                              <div className="room-info" style={{ borderLeftColor: categoryInfo.color }}>
+                                <div className="room-header">
+                                  <h3 className="room-name">
+                                    <span className="room-category-icon">{categoryInfo.icon}</span>
+                                    {room.name}
+                                  </h3>
+                                  <div className="capacity-indicator">
+                                    <div className="capacity-visual">
+                                      <span className="capacity-icon">👥</span>
+                                      <span className="capacity-number">{room.capacity}</span>
+                                    </div>
+                                    <div className="capacity-bar">
+                                      <div
+                                        className={`capacity-fill ${getCapacityLevel(room.capacity)}`}
+                                        style={{
+                                          width: `${Math.min((room.capacity / 200) * 100, 100)}%`,
+                                          backgroundColor: getCapacityColor(room.capacity)
+                                        }}
+                                      ></div>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="room-amenities">
+                                  {room.amenities.map(amenity => (
+                                    <span key={amenity} className="amenity-tag" title={amenity}>
+                                      <span className="amenity-icon">{getAmenityIcon(amenity)}</span>
+                                      <span className="amenity-text">{amenity}</span>
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            </td>
+                            {timeSlots.map(time => {
+                              const isBooked = isSlotBooked(room.id, time);
+                              const booking = getBookingDetails(room.id, time);
+                              const isPast = isTimeSlotInPast(selectedDate, time);
+
+                              return (
+                                <td key={time}>
+                                  {isBooked && isPast ? (
+                                    <div className="time-slot past">
+                                      <div className="slot-title">Past</div>
+                                      <div className="slot-subtitle">{booking.title}</div>
+                                    </div>
+                                  ) : isBooked ? (
+                                    <div className={`time-slot booked ${booking.bookingType || 'hourly'}`}>
+                                      <div className="slot-title">{booking.title}</div>
+                                      <div className="slot-subtitle">{booking.organizer}</div>
+                                      {booking.bookingType !== 'hourly' && (
+                                        <div className="slot-duration">
+                                          {booking.bookingType === 'full-day' ? 'Full Day' :
+                                            booking.bookingType === 'weekly' ? 'Weekly' :
+                                              booking.bookingType === 'multi-day' ?
+                                                `${new Date(booking.startDate).toLocaleDateString()} - ${new Date(booking.endDate).toLocaleDateString()}` :
+                                                'Extended'}
+                                        </div>
+                                      )}
+                                      {canManageBooking(booking) && (
+                                        <div className="admin-booking-controls">
+                                          <button
+                                            onClick={() => editBooking(booking)}
+                                            className="edit-booking-btn"
+                                            title="Edit this booking"
+                                          >
+                                            Edit
+                                          </button>
+                                          <button
+                                            onClick={() => cancelBooking(booking.id)}
+                                            className="cancel-booking-btn"
+                                            title="Cancel this booking"
+                                          >
+                                            Cancel
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : isPast ? (
+                                    <div className="time-slot past">
+                                      <div className="slot-title">Past</div>
+                                      <div className="slot-subtitle">Cannot book</div>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleBooking(room, time)}
+                                      className="time-slot available"
+                                    >
+                                      <div className="slot-title">Available</div>
+                                      <div className="slot-subtitle">Click to book</div>
+                                    </button>
+                                  )}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        );
+                      })}
+                    </>
                   )}
                 </tbody>
               </table>
@@ -762,7 +863,7 @@ const BookingBoard = () => {
                     return (
                       <>
                         <h3>Day Complete</h3>
-                        <p>Booking for today is no longer available (after 6:00 PM).</p>
+                        <p>Booking for today is no longer available (after 4:00 PM).</p>
                         <p>Please select a future date to make new bookings.</p>
                       </>
                     );
@@ -1004,7 +1105,7 @@ const ProcurementOrdersSection = ({ orders, attendeeCount, onOrdersChange }) => 
 const BookingForm = ({ room, time, date, onConfirm, onCancel }) => {
   const timeSlots = [
     '08:00', '09:00', '10:00', '11:00', '12:00', '13:00',
-    '14:00', '15:00', '16:00', '17:00', '18:00'
+    '14:00', '15:00', '16:00'
   ];
 
   const [formData, setFormData] = useState({
@@ -1015,7 +1116,7 @@ const BookingForm = ({ room, time, date, onConfirm, onCancel }) => {
     startDate: date.toISOString().split('T')[0],
     endDate: date.toISOString().split('T')[0],
     startTime: time || '08:00',
-    endTime: time ? (time === '18:00' ? '18:00' : timeSlots[timeSlots.findIndex(t => t === time) + 1]) : '09:00',
+    endTime: time ? (time === '16:00' ? '16:00' : timeSlots[timeSlots.findIndex(t => t === time) + 1]) : '09:00',
     description: '',
     attendeeCount: 1,
     procurementOrders: []
@@ -1065,21 +1166,21 @@ const BookingForm = ({ room, time, date, onConfirm, onCancel }) => {
           case 'full-day':
             newData.endDate = prev.startDate;
             newData.startTime = '08:00';
-            newData.endTime = '18:00';
+            newData.endTime = '16:00';
             break;
           case 'weekly':
             const endDate = new Date(startDate);
             endDate.setDate(startDate.getDate() + 6);
             newData.endDate = endDate.toISOString().split('T')[0];
             newData.startTime = '08:00';
-            newData.endTime = '18:00';
+            newData.endTime = '16:00';
             break;
           case 'multi-day':
             const multiEndDate = new Date(startDate);
             multiEndDate.setDate(startDate.getDate() + 1);
             newData.endDate = multiEndDate.toISOString().split('T')[0];
             newData.startTime = '08:00';
-            newData.endTime = '18:00';
+            newData.endTime = '16:00';
             break;
           default: // hourly
             newData.endDate = prev.startDate;
@@ -1161,7 +1262,7 @@ const BookingForm = ({ room, time, date, onConfirm, onCancel }) => {
               className="form-select"
             >
               <option value="hourly">Hourly Booking</option>
-              <option value="full-day">Full Day (8:00 AM - 6:00 PM)</option>
+              <option value="full-day">Full Day (8:00 AM - 4:00 PM)</option>
               <option value="multi-day">Multi-Day Booking</option>
               <option value="weekly">Weekly Booking (7 days)</option>
             </select>
@@ -1439,7 +1540,7 @@ const EditBookingForm = ({ booking, rooms, onUpdate, onCancel }) => {
 
   const timeSlots = [
     '08:00', '09:00', '10:00', '11:00', '12:00', '13:00',
-    '14:00', '15:00', '16:00', '17:00', '18:00'
+    '14:00', '15:00', '16:00'
   ];
 
   const handleSubmit = (e) => {
