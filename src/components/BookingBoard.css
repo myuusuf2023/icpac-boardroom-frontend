@@ -12,7 +12,7 @@
 
 /* Header Styles */
 .booking-header {
-  background: #065f46;
+  background: #034930;
   border-radius: 16px;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   padding: 24px;
@@ -62,7 +62,7 @@
 
 /* Date Selector Styles */
 .date-section {
-  background: #065f46;
+  background: #034930;
   border-radius: 16px;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   padding: 18px;
@@ -1154,7 +1154,7 @@
 
 /* Footer Styles */
 .booking-footer {
-  background: #065f46;
+  background: #034930;
   color: white;
   margin-top: 48px;
   border-radius: 16px;
@@ -1240,7 +1240,7 @@
 }
 
 .footer-bottom {
-  background: #047857;
+  background: #022c1f;
   padding: 20px 30px;
   text-align: center;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
