@@ -17,6 +17,9 @@ const BookingBoard = () => {
   const [users, setUsers] = useState([]);
   const [showUserManagement, setShowUserManagement] = useState(false);
   const [showProcurementDashboard, setShowProcurementDashboard] = useState(false);
+  const [showSignup, setShowSignup] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showLandingPage, setShowLandingPage] = useState(true);
 
   // localStorage functions
   const saveBookingsToStorage = (bookingsData) => {
@@ -59,12 +62,6 @@ const BookingBoard = () => {
     return null;
   };
 
-  const clearAllBookings = () => {
-    if (window.confirm('Are you sure you want to clear all bookings? This cannot be undone.')) {
-      setBookings([]);
-      localStorage.removeItem('icpac_bookings');
-    }
-  };
 
   const shouldShowBookingInterface = (date) => {
     const now = new Date();
@@ -111,6 +108,8 @@ const BookingBoard = () => {
     const user = users.find(u => u.email === email && u.password === password);
     if (user) {
       setCurrentUser(user);
+      setIsAuthenticated(true);
+      setShowLandingPage(false);
       setShowUserLogin(false);
       localStorage.setItem('icpac_current_user', JSON.stringify(user));
 
@@ -127,8 +126,43 @@ const BookingBoard = () => {
   const handleUserLogout = () => {
     setCurrentUser(null);
     setIsAdmin(false);
+    setIsAuthenticated(false);
+    setShowLandingPage(true);
     localStorage.removeItem('icpac_current_user');
     localStorage.removeItem('icpac_admin');
+  };
+
+  const handleUserSignup = (userData) => {
+    // Check if email already exists
+    const emailExists = users.some(user => user.email.toLowerCase() === userData.email.toLowerCase());
+    if (emailExists) {
+      alert('Error: A user with this email address already exists. Please use a different email.');
+      return;
+    }
+
+    // Create new user
+    const newUser = {
+      id: Date.now(),
+      name: userData.name,
+      email: userData.email,
+      password: userData.password,
+      role: 'user',
+      managedRooms: [],
+      createdAt: new Date().toISOString()
+    };
+
+    const updatedUsers = [...users, newUser];
+    setUsers(updatedUsers);
+    saveUsersToStorage(updatedUsers);
+    
+    // Auto-login the new user
+    setCurrentUser(newUser);
+    setIsAuthenticated(true);
+    setShowLandingPage(false);
+    setShowSignup(false);
+    localStorage.setItem('icpac_current_user', JSON.stringify(newUser));
+    
+    alert('Account created successfully! You are now logged in.');
   };
 
   const sendProcurementNotification = (booking) => {
@@ -305,7 +339,10 @@ const BookingBoard = () => {
 
     const currentUserData = localStorage.getItem('icpac_current_user');
     if (currentUserData) {
-      setCurrentUser(JSON.parse(currentUserData));
+      const userData = JSON.parse(currentUserData);
+      setCurrentUser(userData);
+      setIsAuthenticated(true);
+      setShowLandingPage(false);
     }
 
     // Load users or create default super admin
@@ -347,8 +384,8 @@ const BookingBoard = () => {
       { id: 2, name: 'Boardroom - First Floor', capacity: 25, category: 'conference', amenities: ['Projector', 'Whiteboard', 'Video Conferencing'] },
       { id: 3, name: 'SmallBoardroom - 1st Floor', capacity: 12, category: 'conference', amenities: ['TV Screen', 'Whiteboard'] },
       { id: 4, name: 'Situation Room', capacity: 8, category: 'special', amenities: ['Screen'] },
-      { id: 5, name: 'Computer Lab 1 - Underground', capacity: 20, category: 'computer_lab', amenities: ['Computers', 'Projector', 'Whiteboard', 'Internet Access', 'Printers'] },
-      { id: 6, name: 'Computer Lab 2 - First Floor', capacity: 20, category: 'computer_lab', amenities: ['Computers', 'Projector', 'Whiteboard', 'Internet Access', 'Printers'] },
+      { id: 5, name: 'Computer Lab 1 - Underground', capacity: 20, category: 'computer_lab', amenities: ['Computers', 'Projector', 'Whiteboard',] },
+      { id: 6, name: 'Computer Lab 2 - First Floor', capacity: 20, category: 'computer_lab', amenities: ['Computers', 'Projector', 'Whiteboard',] },
     ]);
 
     // Load bookings from localStorage or use default
@@ -570,6 +607,36 @@ const BookingBoard = () => {
     setSelectedTime('');
   };
 
+  // Show landing page if not authenticated
+  if (showLandingPage || !isAuthenticated) {
+    return (
+      <div className="booking-container">
+        <LandingPage
+          onLogin={() => setShowUserLogin(true)}
+          onSignup={() => setShowSignup(true)}
+          onViewDashboard={() => window.location.href = '/dashboard'}
+        />
+        
+        {/* Login Modal */}
+        {showUserLogin && (
+          <UserLoginModal
+            onLogin={handleUserLogin}
+            onCancel={() => setShowUserLogin(false)}
+          />
+        )}
+        
+        {/* Signup Modal */}
+        {showSignup && (
+          <UserSignupModal
+            onSignup={handleUserSignup}
+            onCancel={() => setShowSignup(false)}
+          />
+        )}
+
+      </div>
+    );
+  }
+
   return (
     <div className="booking-container">
       <div className="booking-wrapper">
@@ -595,11 +662,12 @@ const BookingBoard = () => {
                 <div className="user-panel">
                   <span className="user-info">
                     {currentUser.name}
-                    <span className={`role-badge role-${currentUser.role}`}>
-                      {currentUser.role === 'super_admin' ? 'Super Admin' :
-                        currentUser.role === 'room_admin' ? 'Room Admin' :
+                    {currentUser.role !== 'super_admin' && (
+                      <span className={`role-badge role-${currentUser.role}`}>
+                        {currentUser.role === 'room_admin' ? 'Room Admin' :
                           currentUser.role === 'procurement_officer' ? 'Procurement Officer' : 'User'}
-                    </span>
+                      </span>
+                    )}
                   </span>
                   {currentUser.role === 'super_admin' && (
                     <>
@@ -609,13 +677,6 @@ const BookingBoard = () => {
                         title="Manage Users"
                       >
                         Manage Users
-                      </button>
-                      <button
-                        onClick={clearAllBookings}
-                        className="clear-bookings-btn"
-                        title="Clear all bookings"
-                      >
-                        Clear All
                       </button>
                     </>
                   )}
@@ -636,17 +697,7 @@ const BookingBoard = () => {
                     Logout
                   </button>
                 </div>
-              ) : (
-                <div className="auth-buttons">
-                  <button
-                    onClick={() => setShowUserLogin(true)}
-                    className="admin-login-btn"
-                    title="Login"
-                  >
-                    Login
-                  </button>
-                </div>
-              )}
+              ) : null}
             </div>
           </div>
 
@@ -700,7 +751,12 @@ const BookingBoard = () => {
               <table className="grid-table">
                 <thead>
                   <tr>
-                    <th>Room</th>
+                    <th>
+                      <span className="table-header-room">
+                        <span className="header-icon">🏢</span>
+                        <span className="header-text" style={{ color: 'black', fontWeight: 'bold', fontSize: '16px' }}>Meeting Rooms</span>
+                      </span>
+                    </th>
                     {timeSlots.map(time => (
                       <th key={time}>{time}</th>
                     ))}
@@ -722,118 +778,107 @@ const BookingBoard = () => {
                       </td>
                     </tr>
                   ) : (
-                    <>
-                      <tr className="category-header">
-                        <td colSpan={timeSlots.length + 1}>
-                          <div className="category-title" style={{ borderLeftColor: '#10b981' }}>
-                            <span className="category-icon">🏢</span>
-                            <span className="category-label">All Meeting Rooms</span>
-                            <span className="category-count">({getVisibleRooms().length} room{getVisibleRooms().length !== 1 ? 's' : ''})</span>
-                          </div>
-                        </td>
-                      </tr>
-                      {getVisibleRooms().map(room => {
-                        const categoryInfo = getCategoryInfo(room.category);
-                        return (
-                          <tr key={room.id} className="room-row">
-                            <td>
-                              <div className="room-info" style={{ borderLeftColor: categoryInfo.color }}>
-                                <div className="room-header">
-                                  <h3 className="room-name">
-                                    <span className="room-category-icon">{categoryInfo.icon}</span>
-                                    {room.name}
-                                  </h3>
-                                  <div className="capacity-indicator">
-                                    <div className="capacity-visual">
-                                      <span className="capacity-icon">👥</span>
-                                      <span className="capacity-number">{room.capacity}</span>
-                                    </div>
-                                    <div className="capacity-bar">
-                                      <div
-                                        className={`capacity-fill ${getCapacityLevel(room.capacity)}`}
-                                        style={{
-                                          width: `${Math.min((room.capacity / 200) * 100, 100)}%`,
-                                          backgroundColor: getCapacityColor(room.capacity)
-                                        }}
-                                      ></div>
-                                    </div>
+                    getVisibleRooms().map(room => {
+                      const categoryInfo = getCategoryInfo(room.category);
+                      return (
+                        <tr key={room.id} className="room-row">
+                          <td>
+                            <div className="room-info" style={{ borderLeftColor: categoryInfo.color }}>
+                              <div className="room-header">
+                                <h3 className="room-name">
+                                  <span className="room-category-icon">{categoryInfo.icon}</span>
+                                  {room.name}
+                                </h3>
+                                <div className="capacity-indicator">
+                                  <div className="capacity-visual">
+                                    <span className="capacity-icon">👥</span>
+                                    <span className="capacity-number">{room.capacity}</span>
+                                  </div>
+                                  <div className="capacity-bar">
+                                    <div
+                                      className={`capacity-fill ${getCapacityLevel(room.capacity)}`}
+                                      style={{
+                                        width: `${Math.min((room.capacity / 200) * 100, 100)}%`,
+                                        backgroundColor: getCapacityColor(room.capacity)
+                                      }}
+                                    ></div>
                                   </div>
                                 </div>
-                                <div className="room-amenities">
-                                  {room.amenities.map(amenity => (
-                                    <span key={amenity} className="amenity-tag" title={amenity}>
-                                      <span className="amenity-icon">{getAmenityIcon(amenity)}</span>
-                                      <span className="amenity-text">{amenity}</span>
-                                    </span>
-                                  ))}
-                                </div>
                               </div>
-                            </td>
-                            {timeSlots.map(time => {
-                              const isBooked = isSlotBooked(room.id, time);
-                              const booking = getBookingDetails(room.id, time);
-                              const isPast = isTimeSlotInPast(selectedDate, time);
+                              <div className="room-amenities">
+                                {room.amenities.map(amenity => (
+                                  <span key={amenity} className="amenity-tag" title={amenity}>
+                                    <span className="amenity-icon">{getAmenityIcon(amenity)}</span>
+                                    <span className="amenity-text">{amenity}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          </td>
+                          {timeSlots.map(time => {
+                            const isBooked = isSlotBooked(room.id, time);
+                            const booking = getBookingDetails(room.id, time);
+                            const isPast = isTimeSlotInPast(selectedDate, time);
 
-                              return (
-                                <td key={time}>
-                                  {isBooked && isPast ? (
-                                    <div className="time-slot past">
-                                      <div className="slot-title">Past</div>
-                                      <div className="slot-subtitle">{booking.title}</div>
-                                    </div>
-                                  ) : isBooked ? (
-                                    <div className={`time-slot booked ${booking.bookingType || 'hourly'}`}>
-                                      <div className="slot-title">{booking.title}</div>
-                                      <div className="slot-subtitle">{booking.organizer}</div>
-                                      {booking.bookingType !== 'hourly' && (
-                                        <div className="slot-duration">
-                                          {booking.bookingType === 'full-day' ? 'Full Day' :
-                                            booking.bookingType === 'weekly' ? 'Weekly' :
-                                              booking.bookingType === 'multi-day' ?
-                                                `${new Date(booking.startDate).toLocaleDateString()} - ${new Date(booking.endDate).toLocaleDateString()}` :
-                                                'Extended'}
-                                        </div>
-                                      )}
-                                      {canManageBooking(booking) && (
-                                        <div className="admin-booking-controls">
-                                          <button
-                                            onClick={() => editBooking(booking)}
-                                            className="edit-booking-btn"
-                                            title="Edit this booking"
-                                          >
-                                            Edit
-                                          </button>
-                                          <button
-                                            onClick={() => cancelBooking(booking.id)}
-                                            className="cancel-booking-btn"
-                                            title="Cancel this booking"
-                                          >
-                                            Cancel
-                                          </button>
-                                        </div>
-                                      )}
-                                    </div>
-                                  ) : isPast ? (
-                                    <div className="time-slot past">
-                                      <div className="slot-title">Past</div>
-                                      <div className="slot-subtitle">Cannot book</div>
-                                    </div>
-                                  ) : (
-                                    <button
-                                      onClick={() => handleBooking(room, time)}
-                                      className="time-slot available"
-                                    >
-                                      <div className="slot-title">Available</div>
-                                      <div className="slot-subtitle">Click to book</div>
-                                    </button>
-                                  )}
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        );
-                      })}
-                    </>
+                            return (
+                              <td key={time}>
+                                {isBooked && isPast ? (
+                                  <div className="time-slot past">
+                                    <div className="slot-title">Past</div>
+                                    <div className="slot-subtitle">{booking.title}</div>
+                                  </div>
+                                ) : isBooked ? (
+                                  <div className={`time-slot booked ${booking.bookingType || 'hourly'}`}>
+                                    <div className="slot-title">{booking.title}</div>
+                                    <div className="slot-subtitle">{booking.organizer}</div>
+                                    {booking.bookingType !== 'hourly' && (
+                                      <div className="slot-duration">
+                                        {booking.bookingType === 'full-day' ? 'Full Day' :
+                                          booking.bookingType === 'weekly' ? 'Weekly' :
+                                            booking.bookingType === 'multi-day' ?
+                                              `${new Date(booking.startDate).toLocaleDateString()} - ${new Date(booking.endDate).toLocaleDateString()}` :
+                                              'Extended'}
+                                      </div>
+                                    )}
+                                    {canManageBooking(booking) && (
+                                      <div className="admin-booking-controls">
+                                        <button
+                                          onClick={() => editBooking(booking)}
+                                          className="edit-booking-btn"
+                                          title="Edit this booking"
+                                        >
+                                          Edit
+                                        </button>
+                                        <button
+                                          onClick={() => cancelBooking(booking.id)}
+                                          className="cancel-booking-btn"
+                                          title="Cancel this booking"
+                                        >
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : isPast ? (
+                                  <div className="time-slot past">
+                                    <div className="slot-title">Past</div>
+                                    <div className="slot-subtitle">Cannot book</div>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => handleBooking(room, time)}
+                                    className="time-slot available"
+                                  >
+                                    <div className="slot-title">Available</div>
+                                    <div className="slot-subtitle">Click to book</div>
+                                  </button>
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
@@ -906,13 +951,6 @@ const BookingBoard = () => {
           />
         )}
 
-        {/* User Login Modal */}
-        {showUserLogin && (
-          <UserLoginModal
-            onLogin={handleUserLogin}
-            onCancel={() => setShowUserLogin(false)}
-          />
-        )}
 
 
         {/* User Management Modal */}
@@ -949,9 +987,8 @@ const BookingBoard = () => {
             <div className="footer-section">
               <h4>Quick Links</h4>
               <ul className="footer-links">
-                <li><a href="#" onClick={(e) => { e.preventDefault(); setShowUserLogin(true); }}>User Login</a></li>
-                <li><a href="#" onClick={(e) => { e.preventDefault(); setShowAdminLogin(true); }}>Admin Login</a></li>
                 <li><a href="#" onClick={(e) => { e.preventDefault(); window.location.reload(); }}>Refresh</a></li>
+                <li><a href="#" onClick={(e) => { e.preventDefault(); handleUserLogout(); }}>Logout</a></li>
               </ul>
             </div>
 
@@ -1484,6 +1521,358 @@ const UserLoginModal = ({ onLogin, onCancel }) => {
   );
 };
 
+const UserSignupModal = ({ onSignup, onCancel }) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    // Validate passwords match
+    if (formData.password !== formData.confirmPassword) {
+      alert('Passwords do not match');
+      return;
+    }
+    
+    // Validate password length
+    if (formData.password.length < 6) {
+      alert('Password must be at least 6 characters long');
+      return;
+    }
+    
+    onSignup(formData);
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <div className="modal-header">
+          <h3 className="modal-title">Create Account</h3>
+          <button onClick={onCancel} className="modal-close">×</button>
+        </div>
+        <form onSubmit={handleSubmit} className="user-signup-form">
+          <div className="form-group">
+            <label className="form-label">Full Name</label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              className="form-input"
+              placeholder="Enter your full name"
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Email</label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              className="form-input"
+              placeholder="Enter your email"
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Password</label>
+            <input
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              className="form-input"
+              placeholder="Enter your password (min 6 characters)"
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Confirm Password</label>
+            <input
+              type="password"
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              className="form-input"
+              placeholder="Confirm your password"
+              required
+            />
+          </div>
+          <div className="form-buttons">
+            <button type="button" onClick={onCancel} className="form-button secondary">
+              Cancel
+            </button>
+            <button type="submit" className="form-button primary">
+              Sign Up
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+const LandingPage = ({ onLogin, onSignup, onViewDashboard }) => {
+  return (
+    <div className="booking-container">
+      <div className="booking-wrapper">
+        {/* Header */}
+        <div className="booking-header">
+          <div className="header-title-row">
+            <div className="logo-section">
+              <img src="/ICPAC_Website_Header_Logo.svg" alt="ICPAC Logo" className="icpac-logo" />
+            </div>
+            <div className="title-section">
+              <h1 className="booking-title">ICPAC MEETING BOOKING SYSTEM</h1>
+              <p className="booking-subtitle">Welcome to the ICPAC Meeting Room Booking System</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Welcome Section */}
+        <div className="date-section">
+          <div className="date-header">
+            <h2 className="date-title">Welcome to ICPAC Booking System</h2>
+            <div className="admin-controls">
+              <div className="auth-buttons">
+                <button 
+                  onClick={onLogin}
+                  className="admin-login-btn"
+                  title="Login to your account"
+                >
+                  Login
+                </button>
+                <button 
+                  onClick={onSignup}
+                  className="user-management-btn"
+                  title="Create new account"
+                >
+                  Sign Up
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="date-picker-section">
+            <label className="date-picker-label" style={{ fontSize: '18px', fontWeight: 'bold', color: '#ffffff' }}>Get Started:</label>
+            <p style={{ marginTop: '10px', color: '#ffffff', fontSize: '16px', fontStyle: 'italic', fontWeight: '500' }}>
+              Please login to your account or create a new one to access the meeting room booking system.
+            </p>
+          </div>
+        </div>
+
+        {/* Dashboard Analytics Section */}
+        <div className="date-section">
+          <div className="date-header">
+            <h2 className="date-title">Room Analytics & Insights</h2>
+            <div className="admin-controls">
+              <button 
+                onClick={onViewDashboard}
+                className="admin-login-btn"
+                title="View detailed analytics dashboard"
+              >
+                📊 View Dashboard
+              </button>
+            </div>
+          </div>
+          
+          <div className="dashboard-preview" style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
+            gap: '20px', 
+            padding: '20px',
+            backgroundColor: '#f8fafc',
+            borderRadius: '12px',
+            marginTop: '20px',
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)'
+          }}>
+            <div className="stat-card" style={{ 
+              background: 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)', 
+              padding: '20px', 
+              borderRadius: '12px',
+              textAlign: 'center',
+              border: '1px solid rgba(56, 189, 248, 0.2)',
+              boxShadow: '0 2px 4px rgba(56, 189, 248, 0.1)',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = 'translateY(-2px)';
+              e.target.style.boxShadow = '0 4px 12px rgba(56, 189, 248, 0.2)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = '0 2px 4px rgba(56, 189, 248, 0.1)';
+            }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🏢</div>
+              <h3 style={{ color: '#0369a1', margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600' }}>Total Rooms</h3>
+              <p style={{ fontSize: '28px', fontWeight: 'bold', color: '#0c4a6e', margin: '0' }}>6</p>
+            </div>
+            <div className="stat-card" style={{ 
+              background: 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)', 
+              padding: '20px', 
+              borderRadius: '12px',
+              textAlign: 'center',
+              border: '1px solid rgba(34, 197, 94, 0.2)',
+              boxShadow: '0 2px 4px rgba(34, 197, 94, 0.1)',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = 'translateY(-2px)';
+              e.target.style.boxShadow = '0 4px 12px rgba(34, 197, 94, 0.2)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = '0 2px 4px rgba(34, 197, 94, 0.1)';
+            }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>📊</div>
+              <h3 style={{ color: '#166534', margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600' }}>Available Features</h3>
+              <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#14532d', margin: '0' }}>Live Analytics</p>
+            </div>
+            <div className="stat-card" style={{ 
+              background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)', 
+              padding: '20px', 
+              borderRadius: '12px',
+              textAlign: 'center',
+              border: '1px solid rgba(245, 158, 11, 0.2)',
+              boxShadow: '0 2px 4px rgba(245, 158, 11, 0.1)',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = 'translateY(-2px)';
+              e.target.style.boxShadow = '0 4px 12px rgba(245, 158, 11, 0.2)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = '0 2px 4px rgba(245, 158, 11, 0.1)';
+            }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🎯</div>
+              <h3 style={{ color: '#d97706', margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600' }}>Room Types</h3>
+              <p style={{ fontSize: '28px', fontWeight: 'bold', color: '#92400e', margin: '0' }}>3</p>
+            </div>
+            <div className="stat-card" style={{ 
+              background: 'linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)', 
+              padding: '20px', 
+              borderRadius: '12px',
+              textAlign: 'center',
+              border: '1px solid rgba(139, 92, 246, 0.2)',
+              boxShadow: '0 2px 4px rgba(139, 92, 246, 0.1)',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = 'translateY(-2px)';
+              e.target.style.boxShadow = '0 4px 12px rgba(139, 92, 246, 0.2)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = '0 2px 4px rgba(139, 92, 246, 0.1)';
+            }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>⚡</div>
+              <h3 style={{ color: '#7c3aed', margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600' }}>Real-time</h3>
+              <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#5b21b6', margin: '0' }}>Updates</p>
+            </div>
+          </div>
+          
+          <div className="dashboard-features" style={{ 
+            marginTop: '20px', 
+            padding: '20px',
+            backgroundColor: '#f8fafc',
+            borderRadius: '8px'
+          }}>
+            <h3 style={{ color: '#374151', marginBottom: '15px' }}>Dashboard Features Available:</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px' }}>
+              <div style={{ padding: '10px', backgroundColor: '#fff', borderRadius: '6px', borderLeft: '4px solid #3b82f6' }}>
+                <strong>📈 Room Utilization Stats</strong>
+                <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#6b7280' }}>Real-time usage percentages and booking counts</p>
+              </div>
+              <div style={{ padding: '10px', backgroundColor: '#fff', borderRadius: '6px', borderLeft: '4px solid #10b981' }}>
+                <strong>🏆 Room Rankings</strong>
+                <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#6b7280' }}>Busiest to least used rooms with analytics</p>
+              </div>
+              <div style={{ padding: '10px', backgroundColor: '#fff', borderRadius: '6px', borderLeft: '4px solid #f59e0b' }}>
+                <strong>🕐 Peak Hours Analysis</strong>
+                <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#6b7280' }}>Time-based usage patterns and trends</p>
+              </div>
+              <div style={{ padding: '10px', backgroundColor: '#fff', borderRadius: '6px', borderLeft: '4px solid #ef4444' }}>
+                <strong>🔥 Usage Heatmaps</strong>
+                <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#6b7280' }}>Visual representation of room usage by time</p>
+              </div>
+              <div style={{ padding: '10px', backgroundColor: '#fff', borderRadius: '6px', borderLeft: '4px solid #8b5cf6' }}>
+                <strong>📊 Interactive Charts</strong>
+                <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#6b7280' }}>Weekly/monthly booking trends and patterns</p>
+              </div>
+              <div style={{ padding: '10px', backgroundColor: '#fff', borderRadius: '6px', borderLeft: '4px solid #06b6d4' }}>
+                <strong>🎯 Capacity Analysis</strong>
+                <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#6b7280' }}>Efficiency metrics and capacity utilization</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+        {/* Footer */}
+        <footer className="booking-footer">
+          <div className="footer-content">
+            <div className="footer-section">
+              <div className="footer-logo">
+                <img src="/ICPAC_Website_Header_Logo.svg" alt="ICPAC Logo" className="footer-logo-img" />
+                <div className="footer-text">
+                  <h3>ICPAC Boardroom System</h3>
+                  <p>Streamlining meeting room reservations</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="footer-section">
+              <h4>Quick Links</h4>
+              <ul className="footer-links">
+                <li><a href="#" onClick={(e) => { e.preventDefault(); onLogin(); }}>Login</a></li>
+                <li><a href="#" onClick={(e) => { e.preventDefault(); onSignup(); }}>Sign Up</a></li>
+              </ul>
+            </div>
+
+            <div className="footer-section">
+              <h4>Contact Info</h4>
+              <div className="contact-info">
+                <p><strong>ICPAC</strong></p>
+                <p>Climate Prediction and Applications Centre</p>
+                <p>Email: info@icpac.net</p>
+                <p>Phone: +254 20 7095000</p>
+              </div>
+            </div>
+
+            <div className="footer-section">
+              <h4>About the System</h4>
+              <div className="system-stats">
+                <p>Streamlined meeting room booking</p>
+                <p>For ICPAC staff and partners</p>
+                <p>Secure and easy to use</p>
+                <p>Login required for access</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="footer-bottom">
+            <p>&copy; 2025 ICPAC. All rights reserved. | Boardroom Booking System v1.0</p>
+          </div>
+        </footer>
+      </div>
+    </div>
+  );
+};
+
 const AdminLoginModal = ({ onLogin, onCancel }) => {
   const [password, setPassword] = useState('');
 
@@ -1834,13 +2223,6 @@ const UserRegistrationModal = ({ rooms, onRegister, onCancel }) => {
 const UserManagementModal = ({ users, rooms, onUpdateUsers, onCancel }) => {
   const [showAddUser, setShowAddUser] = useState(false);
 
-  const deleteUser = (userId) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      const updatedUsers = users.filter(user => user.id !== userId);
-      onUpdateUsers(updatedUsers);
-      localStorage.setItem('icpac_users', JSON.stringify(updatedUsers));
-    }
-  };
 
   const handleAddUser = (userData) => {
     // Check if email already exists
@@ -1909,13 +2291,7 @@ const UserManagementModal = ({ users, rooms, onUpdateUsers, onCancel }) => {
                     </td>
                     <td>{user.managedRooms ? getRoomNames(user.managedRooms) : 'None'}</td>
                     <td>
-                      <button
-                        onClick={() => deleteUser(user.id)}
-                        className="delete-user-btn"
-                        title="Delete user"
-                      >
-                        Delete
-                      </button>
+                      <span style={{ color: '#6b7280', fontStyle: 'italic' }}>No actions</span>
                     </td>
                   </tr>
                 ))}
