@@ -66,7 +66,10 @@ export const AppProvider = ({ children }) => {
           email: 'john.doe@icpac.net',
           purpose: 'Strategic planning for Q1 2024',
           catering: 'Coffee and pastries',
-          status: 'confirmed'
+          status: 'confirmed',
+          approvalStatus: 'approved',
+          approvedBy: 'admin',
+          approvedAt: new Date().toISOString()
         },
         {
           id: 2,
@@ -80,7 +83,10 @@ export const AppProvider = ({ children }) => {
           email: 'jane.smith@icpac.net',
           purpose: 'Weekly team synchronization',
           catering: 'None',
-          status: 'confirmed'
+          status: 'confirmed',
+          approvalStatus: 'pending',
+          approvedBy: null,
+          approvedAt: null
         }
       ];
       setBookings(defaultBookings);

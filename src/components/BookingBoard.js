@@ -20,6 +20,7 @@ const BookingBoard = () => {
   const [showSignup, setShowSignup] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showLandingPage, setShowLandingPage] = useState(true);
+  const [approvalFilter, setApprovalFilter] = useState('all'); // all, pending, approved, rejected
 
   // localStorage functions
   const saveBookingsToStorage = (bookingsData) => {
@@ -330,6 +331,50 @@ const BookingBoard = () => {
     setEditingBooking(null);
   };
 
+  // Approval functions
+  const canApproveBooking = (booking) => {
+    if (!currentUser) return false;
+    if (currentUser.role === 'super_admin') return true;
+    if (currentUser.role === 'room_admin') {
+      return currentUser.managedRooms && currentUser.managedRooms.includes(booking.roomId);
+    }
+    return false;
+  };
+
+  const approveBooking = (bookingId) => {
+    if (window.confirm('Are you sure you want to approve this booking?')) {
+      const updatedBookings = bookings.map(booking =>
+        booking.id === bookingId
+          ? { 
+              ...booking, 
+              approvalStatus: 'approved',
+              approvedBy: currentUser.name,
+              approvedAt: new Date().toISOString()
+            }
+          : booking
+      );
+      setBookings(updatedBookings);
+      saveBookingsToStorage(updatedBookings);
+    }
+  };
+
+  const rejectBooking = (bookingId) => {
+    if (window.confirm('Are you sure you want to reject this booking?')) {
+      const updatedBookings = bookings.map(booking =>
+        booking.id === bookingId
+          ? { 
+              ...booking, 
+              approvalStatus: 'rejected',
+              approvedBy: currentUser.name,
+              approvedAt: new Date().toISOString()
+            }
+          : booking
+      );
+      setBookings(updatedBookings);
+      saveBookingsToStorage(updatedBookings);
+    }
+  };
+
   // Check for admin status and current user on load
   useEffect(() => {
     const adminStatus = localStorage.getItem('icpac_admin');
@@ -445,6 +490,14 @@ const BookingBoard = () => {
         return false;
       }
 
+      // Apply approval filter (only for admins who can see all statuses)
+      if (approvalFilter !== 'all' && canApproveBooking(booking)) {
+        const bookingStatus = booking.approvalStatus || 'pending';
+        if (bookingStatus !== approvalFilter) {
+          return false;
+        }
+      }
+
       // Check if current date falls within booking date range
       const bookingStartDate = new Date(booking.startDate || booking.date);
       const bookingEndDate = new Date(booking.endDate || booking.date);
@@ -475,6 +528,14 @@ const BookingBoard = () => {
     return bookings.find(booking => {
       if (booking.roomId !== roomId) {
         return false;
+      }
+
+      // Apply approval filter (only for admins who can see all statuses)
+      if (approvalFilter !== 'all' && canApproveBooking(booking)) {
+        const bookingStatus = booking.approvalStatus || 'pending';
+        if (bookingStatus !== approvalFilter) {
+          return false;
+        }
       }
 
       // Check if current date falls within booking date range
@@ -592,7 +653,11 @@ const BookingBoard = () => {
       organizer: bookingData.organizer,
       description: bookingData.description || '',
       attendeeCount: bookingData.attendeeCount || 1,
-      procurementOrders: bookingData.procurementOrders || []
+      procurementOrders: bookingData.procurementOrders || [],
+      // Add approval status fields
+      approvalStatus: 'pending', // pending, approved, rejected
+      approvedBy: null,
+      approvedAt: null
     };
 
     const updatedBookings = [...bookings, newBooking];
@@ -712,6 +777,23 @@ const BookingBoard = () => {
             />
           </div>
 
+          {/* Approval Filter for Admins */}
+          {currentUser && canApproveBooking({ roomId: 1 }) && (
+            <div className="approval-filter-section">
+              <label className="approval-filter-label">Filter by approval status:</label>
+              <select
+                value={approvalFilter}
+                onChange={(e) => setApprovalFilter(e.target.value)}
+                className="approval-filter-select"
+              >
+                <option value="all">All Bookings</option>
+                <option value="pending">Pending Approval</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+          )}
+
           {/* Quick Date Buttons */}
           <div className="date-buttons">
             <p className="quick-dates-label">Quick select (this week):</p>
@@ -828,7 +910,7 @@ const BookingBoard = () => {
                                     <div className="slot-subtitle">{booking.title}</div>
                                   </div>
                                 ) : isBooked ? (
-                                  <div className={`time-slot booked ${booking.bookingType || 'hourly'}`}>
+                                  <div className={`time-slot booked ${booking.bookingType || 'hourly'} ${booking.approvalStatus || 'pending'}`}>
                                     <div className="slot-title">{booking.title}</div>
                                     <div className="slot-subtitle">{booking.organizer}</div>
                                     {booking.bookingType !== 'hourly' && (
@@ -840,6 +922,12 @@ const BookingBoard = () => {
                                               'Extended'}
                                       </div>
                                     )}
+                                    {/* Approval Status Display */}
+                                    <div className={`approval-status ${booking.approvalStatus || 'pending'}`}>
+                                      {booking.approvalStatus === 'approved' && '✅ Approved'}
+                                      {booking.approvalStatus === 'rejected' && '❌ Rejected'}
+                                      {(!booking.approvalStatus || booking.approvalStatus === 'pending') && '⏳ Pending'}
+                                    </div>
                                     {canManageBooking(booking) && (
                                       <div className="admin-booking-controls">
                                         <button
@@ -855,6 +943,25 @@ const BookingBoard = () => {
                                           title="Cancel this booking"
                                         >
                                           Cancel
+                                        </button>
+                                      </div>
+                                    )}
+                                    {/* Approval Controls for Room Admins and Super Admins */}
+                                    {canApproveBooking(booking) && (!booking.approvalStatus || booking.approvalStatus === 'pending') && (
+                                      <div className="approval-controls">
+                                        <button
+                                          onClick={() => approveBooking(booking.id)}
+                                          className="approve-booking-btn"
+                                          title="Approve this booking"
+                                        >
+                                          ✅ Approve
+                                        </button>
+                                        <button
+                                          onClick={() => rejectBooking(booking.id)}
+                                          className="reject-booking-btn"
+                                          title="Reject this booking"
+                                        >
+                                          ❌ Reject
                                         </button>
                                       </div>
                                     )}
