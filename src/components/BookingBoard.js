@@ -1,6 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import './BookingBoard.css';
 
+// Utility function for amenity icons
+const getAmenityIcon = (amenity) => {
+  const amenityIcons = {
+    'Projector': '📽️',
+    'Whiteboard': '📝',
+    'Video Conferencing': '📹',
+    'Audio System': '🎤',
+    'TV Screen': '📺',
+    'Screen': '🖥️',
+    'Computers': '💻',
+    'Internet Access': '🌐',
+    'Printers': '🖨️'
+  };
+  return amenityIcons[amenity] || '🔧';
+};
+
 const BookingBoard = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedTime, setSelectedTime] = useState('');
@@ -18,6 +34,7 @@ const BookingBoard = () => {
   const [showUserManagement, setShowUserManagement] = useState(false);
   const [showProcurementDashboard, setShowProcurementDashboard] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showLandingPage, setShowLandingPage] = useState(true);
   const [approvalFilter, setApprovalFilter] = useState('all'); // all, pending, approved, rejected
@@ -263,20 +280,6 @@ const BookingBoard = () => {
     return categoryConfig[category] || categoryConfig.other;
   };
 
-  const getAmenityIcon = (amenity) => {
-    const amenityIcons = {
-      'Projector': '📽️',
-      'Whiteboard': '📝',
-      'Video Conferencing': '📹',
-      'Audio System': '🎤',
-      'TV Screen': '📺',
-      'Screen': '🖥️',
-      'Computers': '💻',
-      'Internet Access': '🌐',
-      'Printers': '🖨️'
-    };
-    return amenityIcons[amenity] || '🔧';
-  };
 
   const getCapacityLevel = (capacity) => {
     if (capacity <= 10) return 'small';
@@ -687,6 +690,14 @@ const BookingBoard = () => {
           <UserLoginModal
             onLogin={handleUserLogin}
             onCancel={() => setShowUserLogin(false)}
+            onSwitchToSignup={() => {
+              setShowUserLogin(false);
+              setShowSignup(true);
+            }}
+            onForgotPassword={() => {
+              setShowUserLogin(false);
+              setShowForgotPassword(true);
+            }}
           />
         )}
         
@@ -695,6 +706,21 @@ const BookingBoard = () => {
           <UserSignupModal
             onSignup={handleUserSignup}
             onCancel={() => setShowSignup(false)}
+            onSwitchToLogin={() => {
+              setShowSignup(false);
+              setShowUserLogin(true);
+            }}
+          />
+        )}
+        
+        {/* Forgot Password Modal */}
+        {showForgotPassword && (
+          <ForgotPasswordModal
+            onCancel={() => setShowForgotPassword(false)}
+            onBackToLogin={() => {
+              setShowForgotPassword(false);
+              setShowUserLogin(true);
+            }}
           />
         )}
 
@@ -910,23 +936,31 @@ const BookingBoard = () => {
                                     <div className="slot-subtitle">{booking.title}</div>
                                   </div>
                                 ) : isBooked ? (
-                                  <div className={`time-slot booked ${booking.bookingType || 'hourly'} ${booking.approvalStatus || 'pending'}`}>
-                                    <div className="slot-title">{booking.title}</div>
-                                    <div className="slot-subtitle">{booking.organizer}</div>
-                                    {booking.bookingType !== 'hourly' && (
-                                      <div className="slot-duration">
-                                        {booking.bookingType === 'full-day' ? 'Full Day' :
-                                          booking.bookingType === 'weekly' ? 'Weekly' :
-                                            booking.bookingType === 'multi-day' ?
-                                              `${new Date(booking.startDate).toLocaleDateString()} - ${new Date(booking.endDate).toLocaleDateString()}` :
-                                              'Extended'}
-                                      </div>
-                                    )}
-                                    {/* Approval Status Display */}
-                                    <div className={`approval-status ${booking.approvalStatus || 'pending'}`}>
-                                      {booking.approvalStatus === 'approved' && '✅ Approved'}
-                                      {booking.approvalStatus === 'rejected' && '❌ Rejected'}
-                                      {(!booking.approvalStatus || booking.approvalStatus === 'pending') && '⏳ Pending'}
+                                  <div className={`modern-time-slot booked ${booking.bookingType || 'hourly'} ${booking.approvalStatus || 'pending'}`}>
+                                    <div className="slot-icon">
+                                      {booking.approvalStatus === 'approved' ? '✅' : 
+                                       booking.approvalStatus === 'rejected' ? '❌' : '⏳'}
+                                    </div>
+                                    <div className="slot-content">
+                                      <div className="slot-title">{booking.title}</div>
+                                      <div className="slot-subtitle">{booking.organizer}</div>
+                                      {booking.bookingType !== 'hourly' && (
+                                        <div className="slot-duration">
+                                          {booking.bookingType === 'full-day' ? 'Full Day' :
+                                            booking.bookingType === 'weekly' ? 'Weekly' :
+                                              booking.bookingType === 'multi-day' ?
+                                                `${new Date(booking.startDate).toLocaleDateString()} - ${new Date(booking.endDate).toLocaleDateString()}` :
+                                                'Extended'}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className={`slot-status booked-status ${booking.approvalStatus || 'pending'}`}>
+                                      <span className="status-text">
+                                        {booking.approvalStatus === 'approved' && 'Approved'}
+                                        {booking.approvalStatus === 'rejected' && 'Rejected'}
+                                        {(!booking.approvalStatus || booking.approvalStatus === 'pending') && 'Pending'}
+                                      </span>
+                                      <div className={`status-pulse ${booking.approvalStatus || 'pending'}`}></div>
                                     </div>
                                     {canManageBooking(booking) && (
                                       <div className="admin-booking-controls">
@@ -967,17 +1001,30 @@ const BookingBoard = () => {
                                     )}
                                   </div>
                                 ) : isPast ? (
-                                  <div className="time-slot past">
-                                    <div className="slot-title">Past</div>
-                                    <div className="slot-subtitle">Cannot book</div>
+                                  <div className="modern-time-slot past">
+                                    <div className="slot-icon">🕐</div>
+                                    <div className="slot-content">
+                                      <div className="slot-title">Past</div>
+                                      <div className="slot-subtitle">Cannot book</div>
+                                    </div>
+                                    <div className="slot-status past-status">
+                                      <span className="status-indicator">❌</span>
+                                    </div>
                                   </div>
                                 ) : (
                                   <button
                                     onClick={() => handleBooking(room, time)}
-                                    className="time-slot available"
+                                    className="modern-time-slot available"
                                   >
-                                    <div className="slot-title">Available</div>
-                                    <div className="slot-subtitle">Click to book</div>
+                                    <div className="slot-icon">⏰</div>
+                                    <div className="slot-content">
+                                      <div className="slot-title">Available</div>
+                                      <div className="slot-subtitle">Click to book</div>
+                                    </div>
+                                    <div className="slot-status available-status">
+                                      <span className="status-indicator">✅</span>
+                                      <div className="availability-pulse"></div>
+                                    </div>
                                   </button>
                                 )}
                               </td>
@@ -1342,230 +1389,316 @@ const BookingForm = ({ room, time, date, onConfirm, onCancel }) => {
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <div className="modal-header">
-          <h3 className="modal-title">Book Meeting Room</h3>
-          <button
-            onClick={onCancel}
-            className="modal-close"
-          >
-            ×
-          </button>
+    <div className="booking-modal-overlay">
+      <div className="booking-modal-container">
+        <button onClick={onCancel} className="booking-modal-close">×</button>
+        
+        <div className="booking-modal-header">
+          <div className="booking-header-icon">
+            <span className="header-icon-bg">📅</span>
+          </div>
+          <div className="booking-header-content">
+            <h3 className="booking-modal-title">Book Meeting Room</h3>
+            <p className="booking-modal-subtitle">Reserve your perfect meeting space</p>
+          </div>
         </div>
 
-        <div className="booking-info">
-          <h4>{room.name}</h4>
-          <p>
-            {formData.bookingType === 'hourly'
-              ? `${new Date(formData.startDate).toLocaleDateString()} at ${formData.startTime} - ${formData.endTime}`
-              : `${new Date(formData.startDate).toLocaleDateString()} to ${new Date(formData.endDate).toLocaleDateString()}`
-            } • Capacity: {room.capacity} people
-          </p>
+        <div className="booking-room-card">
+          <div className="room-card-header">
+            <div className="room-icon">🏢</div>
+            <div className="room-details">
+              <h4 className="room-name">{room.name}</h4>
+              <div className="room-meta">
+                <span className="capacity-badge">
+                  <span className="capacity-icon">👥</span>
+                  {room.capacity} people
+                </span>
+                <span className="booking-preview">
+                  {formData.bookingType === 'hourly'
+                    ? `${new Date(formData.startDate).toLocaleDateString()} • ${formData.startTime} - ${formData.endTime}`
+                    : `${new Date(formData.startDate).toLocaleDateString()} to ${new Date(formData.endDate).toLocaleDateString()}`
+                  }
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="room-amenities">
+            {room.amenities.map(amenity => (
+              <span key={amenity} className="amenity-chip">
+                <span className="amenity-chip-icon">{getAmenityIcon(amenity)}</span>
+                {amenity}
+              </span>
+            ))}
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="booking-form">
-          <div className="form-group">
-            <label className="form-label">
-              Meeting Title *
-            </label>
-            <input
-              type="text"
-              name="title"
-              required
-              value={formData.title}
-              onChange={handleChange}
-              className="form-input"
-              placeholder="Enter meeting title"
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">
-              Organizer *
-            </label>
-            <input
-              type="text"
-              name="organizer"
-              required
-              value={formData.organizer}
-              onChange={handleChange}
-              className="form-input"
-              placeholder="Your name"
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">
-              Booking Type *
-            </label>
-            <select
-              name="bookingType"
-              value={formData.bookingType}
-              onChange={handleChange}
-              className="form-select"
-            >
-              <option value="hourly">Hourly Booking</option>
-              <option value="full-day">Full Day (8:00 AM - 4:00 PM)</option>
-              <option value="multi-day">Multi-Day Booking</option>
-              <option value="weekly">Weekly Booking (7 days)</option>
-            </select>
-          </div>
-
-          {formData.bookingType === 'hourly' && (
-            <div className="form-group">
-              <label className="form-label">
-                Duration (hours)
-              </label>
-              <select
-                name="duration"
-                value={formData.duration}
-                onChange={handleChange}
-                className="form-select"
-              >
-                <option value={1}>1 hour</option>
-                <option value={2}>2 hours</option>
-                <option value={3}>3 hours</option>
-                <option value={4}>4 hours</option>
-              </select>
-            </div>
-          )}
-
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">
-                Start Date *
-              </label>
-              <input
-                type="date"
-                name="startDate"
-                required
-                value={formData.startDate}
-                onChange={handleChange}
-                className="form-input"
-              />
-            </div>
-
-            {formData.bookingType === 'multi-day' && (
-              <div className="form-group">
-                <label className="form-label">
-                  End Date *
-                </label>
+        <form onSubmit={handleSubmit} className="modern-booking-form">
+          <div className="booking-form-grid">
+            <div className="form-field-group">
+              <div className="floating-field">
                 <input
-                  type="date"
-                  name="endDate"
+                  type="text"
+                  name="title"
                   required
-                  value={formData.endDate}
+                  value={formData.title}
                   onChange={handleChange}
-                  className="form-input"
-                  min={formData.startDate}
+                  className={`modern-input ${formData.title ? 'has-value' : ''}`}
+                  id="meeting-title"
                 />
+                <label htmlFor="meeting-title" className="floating-label">
+                  <span className="label-icon">📋</span>
+                  Meeting Title *
+                </label>
+                <div className="field-border"></div>
+              </div>
+            </div>
+
+            <div className="form-field-group">
+              <div className="floating-field">
+                <input
+                  type="text"
+                  name="organizer"
+                  required
+                  value={formData.organizer}
+                  onChange={handleChange}
+                  className={`modern-input ${formData.organizer ? 'has-value' : ''}`}
+                  id="organizer-name"
+                />
+                <label htmlFor="organizer-name" className="floating-label">
+                  <span className="label-icon">👤</span>
+                  Organizer *
+                </label>
+                <div className="field-border"></div>
+              </div>
+            </div>
+
+            <div className="form-field-group">
+              <div className="select-field">
+                <select
+                  name="bookingType"
+                  value={formData.bookingType}
+                  onChange={handleChange}
+                  className="modern-select"
+                  id="booking-type"
+                >
+                  <option value="hourly">⏰ Hourly Booking</option>
+                  <option value="full-day">🌅 Full Day (8:00 AM - 4:00 PM)</option>
+                  <option value="multi-day">📅 Multi-Day Booking</option>
+                  <option value="weekly">📆 Weekly Booking (7 days)</option>
+                </select>
+                <label htmlFor="booking-type" className="select-label">
+                  <span className="label-icon">🕒</span>
+                  Booking Type *
+                </label>
+                <div className="select-arrow">▼</div>
+              </div>
+            </div>
+
+            {formData.bookingType === 'hourly' && (
+              <div className="form-field-group">
+                <div className="select-field">
+                  <select
+                    name="duration"
+                    value={formData.duration}
+                    onChange={handleChange}
+                    className="modern-select"
+                    id="duration"
+                  >
+                    <option value={1}>⏱️ 1 hour</option>
+                    <option value={2}>⏱️ 2 hours</option>
+                    <option value={3}>⏱️ 3 hours</option>
+                    <option value={4}>⏱️ 4 hours</option>
+                  </select>
+                  <label htmlFor="duration" className="select-label">
+                    <span className="label-icon">⏰</span>
+                    Duration
+                  </label>
+                  <div className="select-arrow">▼</div>
+                </div>
               </div>
             )}
-          </div>
 
-          {formData.bookingType === 'hourly' && (
             <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">
-                  Start Time *
-                </label>
-                <select
-                  name="startTime"
-                  value={formData.startTime}
-                  onChange={handleChange}
-                  className="form-select"
-                >
-                  {timeSlots.map(slot => {
-                    const isSlotPast = isTimeSlotInPast(new Date(formData.startDate), slot);
-                    return (
-                      <option key={slot} value={slot} disabled={isSlotPast}>
-                        {slot} {isSlotPast ? '(Past)' : ''}
-                      </option>
-                    );
-                  })}
-                </select>
+              <div className="form-field-group">
+                <div className="date-field">
+                  <input
+                    type="date"
+                    name="startDate"
+                    required
+                    value={formData.startDate}
+                    onChange={handleChange}
+                    className="modern-date-input"
+                    id="start-date"
+                  />
+                  <label htmlFor="start-date" className="date-label">
+                    <span className="label-icon">📅</span>
+                    Start Date *
+                  </label>
+                </div>
               </div>
 
-              <div className="form-group">
-                <label className="form-label">
-                  End Time *
-                </label>
-                <select
-                  name="endTime"
-                  value={formData.endTime}
+              {formData.bookingType === 'multi-day' && (
+                <div className="form-field-group">
+                  <div className="date-field">
+                    <input
+                      type="date"
+                      name="endDate"
+                      required
+                      value={formData.endDate}
+                      onChange={handleChange}
+                      className="modern-date-input"
+                      id="end-date"
+                      min={formData.startDate}
+                    />
+                    <label htmlFor="end-date" className="date-label">
+                      <span className="label-icon">📅</span>
+                      End Date *
+                    </label>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {formData.bookingType === 'hourly' && (
+              <div className="form-row">
+                <div className="form-field-group">
+                  <div className="select-field">
+                    <select
+                      name="startTime"
+                      value={formData.startTime}
+                      onChange={handleChange}
+                      className="modern-select"
+                      id="start-time"
+                    >
+                      {timeSlots.map(slot => {
+                        const isSlotPast = isTimeSlotInPast(new Date(formData.startDate), slot);
+                        return (
+                          <option key={slot} value={slot} disabled={isSlotPast}>
+                            🕐 {slot} {isSlotPast ? '(Past)' : ''}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    <label htmlFor="start-time" className="select-label">
+                      <span className="label-icon">🕐</span>
+                      Start Time *
+                    </label>
+                    <div className="select-arrow">▼</div>
+                  </div>
+                </div>
+
+                <div className="form-field-group">
+                  <div className="select-field">
+                    <select
+                      name="endTime"
+                      value={formData.endTime}
+                      onChange={handleChange}
+                      className="modern-select"
+                      id="end-time"
+                    >
+                      {timeSlots.map(slot => {
+                        const isSlotPast = isTimeSlotInPast(new Date(formData.startDate), slot);
+                        return (
+                          <option key={slot} value={slot} disabled={isSlotPast}>
+                            🕐 {slot} {isSlotPast ? '(Past)' : ''}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    <label htmlFor="end-time" className="select-label">
+                      <span className="label-icon">🕐</span>
+                      End Time *
+                    </label>
+                    <div className="select-arrow">▼</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="form-field-group full-width">
+              <div className="textarea-field">
+                <textarea
+                  name="description"
+                  value={formData.description}
                   onChange={handleChange}
-                  className="form-select"
-                >
-                  {timeSlots.map(slot => {
-                    const isSlotPast = isTimeSlotInPast(new Date(formData.startDate), slot);
-                    return (
-                      <option key={slot} value={slot} disabled={isSlotPast}>
-                        {slot} {isSlotPast ? '(Past)' : ''}
-                      </option>
-                    );
-                  })}
-                </select>
+                  rows="3"
+                  className={`modern-textarea ${formData.description ? 'has-value' : ''}`}
+                  id="description"
+                  placeholder=" "
+                />
+                <label htmlFor="description" className="floating-label">
+                  <span className="label-icon">📝</span>
+                  Description (optional)
+                </label>
+                <div className="field-border"></div>
               </div>
             </div>
-          )}
 
-          <div className="form-group">
-            <label className="form-label">
-              Description (optional)
-            </label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              rows="3"
-              className="form-textarea"
-              placeholder="Meeting description or agenda"
-            />
-          </div>
+            <div className="form-field-group">
+              <div className="number-field">
+                <input
+                  type="number"
+                  name="attendeeCount"
+                  value={formData.attendeeCount}
+                  onChange={handleChange}
+                  min="1"
+                  max="100"
+                  required
+                  className={`modern-number-input ${formData.attendeeCount ? 'has-value' : ''}`}
+                  id="attendee-count"
+                />
+                <label htmlFor="attendee-count" className="floating-label">
+                  <span className="label-icon">👥</span>
+                  Number of Attendees *
+                </label>
+                <div className="field-border"></div>
+                <div className="capacity-indicator">
+                  <span className="capacity-text">Max: {room.capacity}</span>
+                  <div className="capacity-bar">
+                    <div 
+                      className="capacity-fill" 
+                      style={{ width: `${Math.min((formData.attendeeCount / room.capacity) * 100, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
 
-          <div className="form-group">
-            <label className="form-label">
-              Number of Attendees <span className="required">*</span>
-            </label>
-            <input
-              type="number"
-              name="attendeeCount"
-              value={formData.attendeeCount}
-              onChange={handleChange}
-              min="1"
-              max="100"
-              required
-              className="form-input"
-              placeholder="Enter number of attendees"
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">
-              Procurement Orders <span className="optional">(optional)</span>
-            </label>
-            <div className="procurement-section">
-              <ProcurementOrdersSection
-                orders={formData.procurementOrders}
-                attendeeCount={formData.attendeeCount}
-                onOrdersChange={(orders) => setFormData({ ...formData, procurementOrders: orders })}
-              />
+            <div className="form-field-group full-width">
+              <div className="procurement-card">
+                <div className="procurement-header">
+                  <div className="procurement-icon">🛍️</div>
+                  <div className="procurement-title">
+                    <h4>Procurement Orders</h4>
+                    <p>Optional catering and supplies for your meeting</p>
+                  </div>
+                </div>
+                <div className="procurement-content">
+                  <ProcurementOrdersSection
+                    orders={formData.procurementOrders}
+                    attendeeCount={formData.attendeeCount}
+                    onOrdersChange={(orders) => setFormData({ ...formData, procurementOrders: orders })}
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="form-buttons">
+          <div className="booking-form-actions">
             <button
               type="button"
               onClick={onCancel}
-              className="form-button secondary"
+              className="booking-btn secondary"
             >
+              <span className="btn-icon">❌</span>
               Cancel
             </button>
             <button
               type="submit"
-              className="form-button primary"
+              className="booking-btn primary"
             >
+              <span className="btn-icon">✅</span>
               Book Room
             </button>
           </div>
@@ -1575,9 +1708,11 @@ const BookingForm = ({ room, time, date, onConfirm, onCancel }) => {
   );
 };
 
-const UserLoginModal = ({ onLogin, onCancel }) => {
+const UserLoginModal = ({ onLogin, onCancel, onSwitchToSignup, onForgotPassword }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -1585,72 +1720,203 @@ const UserLoginModal = ({ onLogin, onCancel }) => {
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <div className="modal-header">
-          <h3 className="modal-title">User Login</h3>
-          <button onClick={onCancel} className="modal-close">×</button>
+    <div className="auth-modal-overlay">
+      <div className="auth-modal-container">
+        <button onClick={onCancel} className="auth-close-btn">×</button>
+        
+        <div className="auth-split-layout">
+          {/* Branding Sidebar */}
+          <div className="auth-branding-sidebar">
+            <div className="branding-logo">🏢</div>
+            <h2 className="branding-title">Welcome Back!</h2>
+            <p className="branding-subtitle">Sign in to access your ICPAC meeting room booking dashboard</p>
+            <div className="branding-features">
+              <div className="feature-item">
+                <span className="feature-icon">📅</span>
+                <span className="feature-text">Book meeting rooms instantly</span>
+              </div>
+              <div className="feature-item">
+                <span className="feature-icon">🏢</span>
+                <span className="feature-text">Manage your reservations</span>
+              </div>
+              <div className="feature-item">
+                <span className="feature-icon">📊</span>
+                <span className="feature-text">View analytics dashboard</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Login Form */}
+          <div className="auth-form-section">
+            <div className="auth-form-header">
+              <h3 className="auth-form-title">Sign In</h3>
+              <p className="auth-form-subtitle">Enter your credentials to continue</p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="auth-form">
+              <div className="floating-label-group">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onFocus={() => setEmailFocused(true)}
+                  onBlur={() => setEmailFocused(false)}
+                  className={`floating-input ${email ? 'has-value' : ''}`}
+                  required
+                  id="login-email"
+                />
+                <label htmlFor="login-email" className="floating-label">
+                  Email Address
+                </label>
+              </div>
+
+              <div className="floating-label-group">
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onFocus={() => setPasswordFocused(true)}
+                  onBlur={() => setPasswordFocused(false)}
+                  className={`floating-input ${password ? 'has-value' : ''}`}
+                  required
+                  id="login-password"
+                />
+                <label htmlFor="login-password" className="floating-label">
+                  Password
+                </label>
+              </div>
+
+              <div className="forgot-password-link">
+                <span className="auth-switch-link" onClick={onForgotPassword}>
+                  Forgot Password?
+                </span>
+              </div>
+
+              <div className="auth-form-actions">
+                <button type="button" onClick={onCancel} className="auth-secondary-btn">
+                  Cancel
+                </button>
+                <button type="submit" className="auth-primary-btn">
+                  Sign In
+                </button>
+              </div>
+            </form>
+
+            <div className="auth-form-footer">
+              <p className="auth-switch-text">
+                Don't have an account? <span className="auth-switch-link" onClick={onSwitchToSignup}>Sign up here</span>
+              </p>
+            </div>
+          </div>
         </div>
-        <form onSubmit={handleSubmit} className="user-login-form">
-          <div className="form-group">
-            <label className="form-label">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="form-input"
-              placeholder="Enter your email"
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="form-input"
-              placeholder="Enter your password"
-              required
-            />
-          </div>
-          <div className="form-buttons">
-            <button type="button" onClick={onCancel} className="form-button secondary">
-              Cancel
-            </button>
-            <button type="submit" className="form-button primary">
-              Login
-            </button>
-          </div>
-        </form>
       </div>
     </div>
   );
 };
 
-const UserSignupModal = ({ onSignup, onCancel }) => {
+const UserSignupModal = ({ onSignup, onCancel, onSwitchToLogin }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
     confirmPassword: ''
   });
+  const [focusedFields, setFocusedFields] = useState({
+    name: false,
+    email: false,
+    password: false,
+    confirmPassword: false
+  });
+  const [passwordStrength, setPasswordStrength] = useState({
+    score: 0,
+    text: '',
+    color: '#e2e8f0'
+  });
+  const [validationErrors, setValidationErrors] = useState({});
+
+  const calculatePasswordStrength = (password) => {
+    let score = 0;
+    let text = '';
+    let color = '#e2e8f0';
+
+    if (password.length === 0) {
+      return { score: 0, text: '', color: '#e2e8f0' };
+    }
+
+    // Length check
+    if (password.length >= 6) score += 1;
+    if (password.length >= 8) score += 1;
+    if (password.length >= 12) score += 1;
+
+    // Character variety
+    if (/[a-z]/.test(password)) score += 1;
+    if (/[A-Z]/.test(password)) score += 1;
+    if (/[0-9]/.test(password)) score += 1;
+    if (/[^A-Za-z0-9]/.test(password)) score += 1;
+
+    // Determine strength
+    if (score <= 2) {
+      text = 'Weak';
+      color = '#ef4444';
+    } else if (score <= 4) {
+      text = 'Fair';
+      color = '#f59e0b';
+    } else if (score <= 5) {
+      text = 'Good';
+      color = '#3b82f6';
+    } else {
+      text = 'Strong';
+      color = '#10b981';
+    }
+
+    return { score, text, color };
+  };
+
+  const validateForm = () => {
+    const errors = {};
+
+    // Name validation
+    if (!formData.name.trim()) {
+      errors.name = 'Name is required';
+    } else if (formData.name.trim().length < 2) {
+      errors.name = 'Name must be at least 2 characters';
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!formData.email) {
+      errors.email = 'Email is required';
+    } else if (!emailRegex.test(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+
+    // Password validation
+    if (!formData.password) {
+      errors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+    }
+
+    // Confirm password validation
+    if (!formData.confirmPassword) {
+      errors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+    }
+
+    return errors;
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    // Validate passwords match
-    if (formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match');
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
       return;
     }
     
-    // Validate password length
-    if (formData.password.length < 6) {
-      alert('Password must be at least 6 characters long');
-      return;
-    }
-    
+    setValidationErrors({});
     onSignup(formData);
   };
 
@@ -1660,73 +1926,318 @@ const UserSignupModal = ({ onSignup, onCancel }) => {
       ...prev,
       [name]: value
     }));
+
+    // Calculate password strength
+    if (name === 'password') {
+      setPasswordStrength(calculatePasswordStrength(value));
+    }
+
+    // Clear validation error for this field
+    if (validationErrors[name]) {
+      setValidationErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+
+  const handleFocus = (fieldName) => {
+    setFocusedFields(prev => ({ ...prev, [fieldName]: true }));
+  };
+
+  const handleBlur = (fieldName) => {
+    setFocusedFields(prev => ({ ...prev, [fieldName]: false }));
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <div className="modal-header">
-          <h3 className="modal-title">Create Account</h3>
-          <button onClick={onCancel} className="modal-close">×</button>
+    <div className="auth-modal-overlay">
+      <div className="auth-modal-container">
+        <button onClick={onCancel} className="auth-close-btn">×</button>
+        
+        <div className="auth-split-layout">
+          {/* Branding Sidebar */}
+          <div className="auth-branding-sidebar">
+            <div className="branding-logo">🚀</div>
+            <h2 className="branding-title">Join ICPAC!</h2>
+            <p className="branding-subtitle">Create your account to start booking meeting rooms and accessing our services</p>
+            <div className="branding-features">
+              <div className="feature-item">
+                <span className="feature-icon">🚀</span>
+                <span className="feature-text">Quick account setup</span>
+              </div>
+              <div className="feature-item">
+                <span className="feature-icon">🔐</span>
+                <span className="feature-text">Secure authentication</span>
+              </div>
+              <div className="feature-item">
+                <span className="feature-icon">🎯</span>
+                <span className="feature-text">Personalized experience</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Signup Form */}
+          <div className="auth-form-section">
+            <div className="auth-form-header">
+              <h3 className="auth-form-title">Create Account</h3>
+              <p className="auth-form-subtitle">Fill in your details to get started</p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="auth-form">
+              <div className="floating-label-group">
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  onFocus={() => handleFocus('name')}
+                  onBlur={() => handleBlur('name')}
+                  className={`floating-input ${formData.name ? 'has-value' : ''} ${validationErrors.name ? 'error' : ''}`}
+                  required
+                  id="signup-name"
+                />
+                <label htmlFor="signup-name" className="floating-label">
+                  Full Name
+                </label>
+                {validationErrors.name && <span className="error-message">{validationErrors.name}</span>}
+              </div>
+
+              <div className="floating-label-group">
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  onFocus={() => handleFocus('email')}
+                  onBlur={() => handleBlur('email')}
+                  className={`floating-input ${formData.email ? 'has-value' : ''} ${validationErrors.email ? 'error' : ''}`}
+                  required
+                  id="signup-email"
+                />
+                <label htmlFor="signup-email" className="floating-label">
+                  Email Address
+                </label>
+                {validationErrors.email && <span className="error-message">{validationErrors.email}</span>}
+              </div>
+
+              <div className="floating-label-group">
+                <input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  onFocus={() => handleFocus('password')}
+                  onBlur={() => handleBlur('password')}
+                  className={`floating-input ${formData.password ? 'has-value' : ''} ${validationErrors.password ? 'error' : ''}`}
+                  required
+                  id="signup-password"
+                />
+                <label htmlFor="signup-password" className="floating-label">
+                  Password (min 6 characters)
+                </label>
+                {formData.password && (
+                  <div className="password-strength">
+                    <div className="strength-bar">
+                      <div 
+                        className="strength-fill"
+                        style={{ 
+                          width: `${(passwordStrength.score / 6) * 100}%`,
+                          backgroundColor: passwordStrength.color
+                        }}
+                      />
+                    </div>
+                    <span className="strength-text" style={{ color: passwordStrength.color }}>
+                      {passwordStrength.text}
+                    </span>
+                  </div>
+                )}
+                {validationErrors.password && <span className="error-message">{validationErrors.password}</span>}
+              </div>
+
+              <div className="floating-label-group">
+                <input
+                  type="password"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  onFocus={() => handleFocus('confirmPassword')}
+                  onBlur={() => handleBlur('confirmPassword')}
+                  className={`floating-input ${formData.confirmPassword ? 'has-value' : ''} ${validationErrors.confirmPassword ? 'error' : ''}`}
+                  required
+                  id="signup-confirm-password"
+                />
+                <label htmlFor="signup-confirm-password" className="floating-label">
+                  Confirm Password
+                </label>
+                {validationErrors.confirmPassword && <span className="error-message">{validationErrors.confirmPassword}</span>}
+              </div>
+
+              <div className="auth-form-actions">
+                <button type="button" onClick={onCancel} className="auth-secondary-btn">
+                  Cancel
+                </button>
+                <button type="submit" className="auth-primary-btn">
+                  Create Account
+                </button>
+              </div>
+            </form>
+
+            <div className="auth-form-footer">
+              <p className="auth-switch-text">
+                Already have an account? <span className="auth-switch-link" onClick={onSwitchToLogin}>Sign in here</span>
+              </p>
+            </div>
+          </div>
         </div>
-        <form onSubmit={handleSubmit} className="user-signup-form">
-          <div className="form-group">
-            <label className="form-label">Full Name</label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              className="form-input"
-              placeholder="Enter your full name"
-              required
-            />
+      </div>
+    </div>
+  );
+};
+
+const ForgotPasswordModal = ({ onCancel, onBackToLogin }) => {
+  const [email, setEmail] = useState('');
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [validationError, setValidationError] = useState('');
+
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!email) {
+      setValidationError('Email is required');
+      return;
+    }
+    
+    if (!validateEmail(email)) {
+      setValidationError('Please enter a valid email address');
+      return;
+    }
+    
+    setValidationError('');
+    setIsLoading(true);
+    
+    // Simulate API call
+    setTimeout(() => {
+      setIsLoading(false);
+      setIsSubmitted(true);
+    }, 2000);
+  };
+
+  const handleEmailChange = (e) => {
+    setEmail(e.target.value);
+    if (validationError) {
+      setValidationError('');
+    }
+  };
+
+  return (
+    <div className="auth-modal-overlay">
+      <div className="auth-modal-container">
+        <button onClick={onCancel} className="auth-close-btn">×</button>
+        
+        <div className="auth-split-layout">
+          {/* Branding Sidebar */}
+          <div className="auth-branding-sidebar">
+            <div className="branding-logo">🔐</div>
+            <h2 className="branding-title">Reset Password</h2>
+            <p className="branding-subtitle">
+              {isSubmitted 
+                ? "Check your email for reset instructions"
+                : "Enter your email to receive password reset instructions"
+              }
+            </p>
+            <div className="branding-features">
+              <div className="feature-item">
+                <span className="feature-icon">📧</span>
+                <span className="feature-text">Email verification</span>
+              </div>
+              <div className="feature-item">
+                <span className="feature-icon">🔒</span>
+                <span className="feature-text">Secure reset link</span>
+              </div>
+              <div className="feature-item">
+                <span className="feature-icon">⚡</span>
+                <span className="feature-text">Quick process</span>
+              </div>
+            </div>
           </div>
-          <div className="form-group">
-            <label className="form-label">Email</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className="form-input"
-              placeholder="Enter your email"
-              required
-            />
+
+          {/* Forgot Password Form */}
+          <div className="auth-form-section">
+            <div className="auth-form-header">
+              <h3 className="auth-form-title">
+                {isSubmitted ? "Email Sent!" : "Forgot Password"}
+              </h3>
+              <p className="auth-form-subtitle">
+                {isSubmitted 
+                  ? "We've sent password reset instructions to your email address"
+                  : "Enter your email address and we'll send you instructions to reset your password"
+                }
+              </p>
+            </div>
+
+            {!isSubmitted ? (
+              <form onSubmit={handleSubmit} className="auth-form">
+                <div className="floating-label-group">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={handleEmailChange}
+                    className={`floating-input ${email ? 'has-value' : ''} ${validationError ? 'error' : ''}`}
+                    required
+                    id="forgot-email"
+                    disabled={isLoading}
+                  />
+                  <label htmlFor="forgot-email" className="floating-label">
+                    Email Address
+                  </label>
+                  {validationError && <span className="error-message">{validationError}</span>}
+                </div>
+
+                <div className="auth-form-actions">
+                  <button type="button" onClick={onBackToLogin} className="auth-secondary-btn" disabled={isLoading}>
+                    Back to Login
+                  </button>
+                  <button type="submit" className="auth-primary-btn" disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <span className="loading-spinner"></span>
+                        Sending...
+                      </>
+                    ) : (
+                      "Send Reset Link"
+                    )}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="reset-success">
+                <div className="success-icon">✅</div>
+                <div className="success-message">
+                  <h4>Instructions sent!</h4>
+                  <p>Check your email inbox and spam folder for the password reset link.</p>
+                  <p className="reset-email">Sent to: <strong>{email}</strong></p>
+                </div>
+                <div className="auth-form-actions">
+                  <button onClick={onBackToLogin} className="auth-primary-btn">
+                    Back to Login
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="auth-form-footer">
+              <p className="auth-switch-text">
+                Remember your password? <span className="auth-switch-link" onClick={onBackToLogin}>Sign in here</span>
+              </p>
+            </div>
           </div>
-          <div className="form-group">
-            <label className="form-label">Password</label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              className="form-input"
-              placeholder="Enter your password (min 6 characters)"
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Confirm Password</label>
-            <input
-              type="password"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              className="form-input"
-              placeholder="Confirm your password"
-              required
-            />
-          </div>
-          <div className="form-buttons">
-            <button type="button" onClick={onCancel} className="form-button secondary">
-              Cancel
-            </button>
-            <button type="submit" className="form-button primary">
-              Sign Up
-            </button>
-          </div>
-        </form>
+        </div>
       </div>
     </div>
   );
