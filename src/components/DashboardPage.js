@@ -13,6 +13,8 @@ const DashboardPage = () => {
   const navigate = useNavigate();
   const [timeRange, setTimeRange] = useState('week');
   const [activeTab, setActiveTab] = useState('overview');
+  const [selectedRoomType, setSelectedRoomType] = useState(null);
+  const [hoveredSegment, setHoveredSegment] = useState(null);
 
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
 
@@ -59,23 +61,49 @@ const DashboardPage = () => {
 
   const roomTypeData = useMemo(() => {
     const typeStats = {};
+    let totalCapacity = 0;
+    let totalBookings = 0;
+    
     rooms.forEach(room => {
       const roomBookings = filteredBookings.filter(b => b.roomId === room.id);
       const categoryName = room.category.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
       
       if (!typeStats[categoryName]) {
-        typeStats[categoryName] = { count: 0, bookings: 0 };
+        typeStats[categoryName] = { 
+          count: 0, 
+          bookings: 0, 
+          capacity: 0,
+          utilization: 0,
+          avgBookingSize: 0
+        };
       }
+      
       typeStats[categoryName].count += 1;
       typeStats[categoryName].bookings += roomBookings.length;
+      typeStats[categoryName].capacity += room.capacity;
+      totalCapacity += room.capacity;
+      totalBookings += roomBookings.length;
     });
 
-    return Object.entries(typeStats).map(([type, stats]) => ({
-      type,
-      rooms: stats.count,
-      bookings: stats.bookings
-    }));
-  }, [rooms, filteredBookings]);
+    return Object.entries(typeStats).map(([type, stats], index) => {
+      const utilizationRate = totalBookings > 0 ? (stats.bookings / totalBookings * 100) : 0;
+      const capacityShare = (stats.capacity / totalCapacity * 100);
+      
+      return {
+        type,
+        rooms: stats.count,
+        bookings: stats.bookings,
+        capacity: stats.capacity,
+        utilization: utilizationRate,
+        capacityShare: capacityShare,
+        avgCapacity: Math.round(stats.capacity / stats.count),
+        color: COLORS[index % COLORS.length],
+        icon: type.includes('Conference') ? '🏢' : 
+              type.includes('Computer') ? '💻' : 
+              type.includes('Special') ? '⭐' : '🏠'
+      };
+    });
+  }, [rooms, filteredBookings, COLORS]);
 
   const peakHoursData = useMemo(() => {
     const hourStats = {};
@@ -212,29 +240,160 @@ const DashboardPage = () => {
       </div>
 
       <div className="booking-grid compact-charts">
-        <div className="grid-header compact-header">
-          <h3>🎯 Room Type Distribution</h3>
-        </div>
-        <div className="grid-table-container chart-container-compact">
-          <ResponsiveContainer width="100%" height={170}>
-            <PieChart>
-              <Pie
-                data={roomTypeData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ type, bookings }) => `${type}: ${bookings}`}
-                outerRadius={60}
-                fill="#8884d8"
-                dataKey="bookings"
-              >
-                {roomTypeData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+        <div className="enhanced-card">
+          {/* Professional Header */}
+          <div className="enhanced-card-header">
+            <div className="header-left">
+              <div className="header-icon">
+                <span className="icon-background">🎯</span>
+              </div>
+              <div className="header-content">
+                <h3 className="card-title">Room Type Distribution</h3>
+                <p className="card-subtitle">Booking patterns across room categories</p>
+              </div>
+            </div>
+            <div className="header-right">
+              <div className="total-count">
+                <div className="count-value">{totalBookings}</div>
+                <div className="count-label">Total Bookings</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Side-by-side Layout */}
+          <div className="enhanced-card-content">
+            <div className="chart-section">
+              <div className="doughnut-chart-container">
+                <ResponsiveContainer width="100%" height={250}>
+                  <PieChart>
+                    <Pie
+                      data={roomTypeData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      innerRadius={60}
+                      outerRadius={110}
+                      paddingAngle={3}
+                      dataKey="bookings"
+                      onMouseEnter={(data, index) => setHoveredSegment(index)}
+                      onMouseLeave={() => setHoveredSegment(null)}
+                    >
+                      {roomTypeData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={entry.color}
+                          stroke={hoveredSegment === index ? '#ffffff' : 'none'}
+                          strokeWidth={hoveredSegment === index ? 3 : 0}
+                          style={{
+                            filter: hoveredSegment === index ? 'brightness(1.1)' : 'brightness(1)',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease'
+                          }}
+                          onClick={() => setSelectedRoomType(selectedRoomType === entry.type ? null : entry.type)}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          return (
+                            <div className="enhanced-tooltip">
+                              <div className="tooltip-header">
+                                <span className="tooltip-icon" style={{color: data.color}}>{data.icon}</span>
+                                <span className="tooltip-title">{data.type}</span>
+                              </div>
+                              <div className="tooltip-stats">
+                                <div className="tooltip-stat">
+                                  <span>Bookings:</span>
+                                  <strong>{data.bookings}</strong>
+                                </div>
+                                <div className="tooltip-stat">
+                                  <span>Rooms:</span>
+                                  <strong>{data.rooms}</strong>
+                                </div>
+                                <div className="tooltip-stat">
+                                  <span>Share:</span>
+                                  <strong>{data.utilization.toFixed(1)}%</strong>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="stats-section">
+              <div className="stats-list">
+                {roomTypeData.map((item, index) => (
+                  <div 
+                    key={item.type}
+                    className={`stat-category ${selectedRoomType === item.type ? 'selected' : ''}`}
+                    onClick={() => setSelectedRoomType(selectedRoomType === item.type ? null : item.type)}
+                    style={{
+                      '--category-color': item.color,
+                      animationDelay: `${index * 0.1}s`
+                    }}
+                  >
+                    <div className="category-header">
+                      <div className="category-indicator">
+                        <div className="color-dot" style={{backgroundColor: item.color}}></div>
+                        <span className="category-icon">{item.icon}</span>
+                      </div>
+                      <div className="category-info">
+                        <div className="category-name">{item.type}</div>
+                        <div className="category-count">{item.rooms} rooms</div>
+                      </div>
+                      <div className="category-value">
+                        <div className="booking-count">{item.bookings}</div>
+                        <div className="booking-label">bookings</div>
+                      </div>
+                    </div>
+                    
+                    <div className="progress-section">
+                      <div className="progress-row">
+                        <span className="progress-label">Usage Share</span>
+                        <div className="progress-bar-container">
+                          <div className="progress-track">
+                            <div 
+                              className="progress-fill"
+                              style={{ 
+                                width: `${item.utilization}%`,
+                                backgroundColor: item.color
+                              }}
+                            />
+                          </div>
+                          <span className="progress-percentage">{item.utilization.toFixed(1)}%</span>
+                        </div>
+                      </div>
+                      
+                      <div className="progress-row">
+                        <span className="progress-label">Capacity</span>
+                        <div className="progress-bar-container">
+                          <div className="progress-track">
+                            <div 
+                              className="progress-fill"
+                              style={{ 
+                                width: `${item.capacityShare}%`,
+                                backgroundColor: item.color,
+                                opacity: 0.7
+                              }}
+                            />
+                          </div>
+                          <span className="progress-percentage">{item.capacityShare.toFixed(1)}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
