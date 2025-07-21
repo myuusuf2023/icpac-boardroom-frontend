@@ -227,7 +227,7 @@ const DashboardPage = () => {
           <h3>📊 Room Usage Ranking</h3>
         </div>
         <div className="grid-table-container chart-container-compact">
-          <ResponsiveContainer width="100%" height={170}>
+          <ResponsiveContainer width="100%" height={140}>
             <BarChart data={roomUtilizationData} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" fontSize={12} />
@@ -264,7 +264,7 @@ const DashboardPage = () => {
           <div className="enhanced-card-content">
             <div className="chart-section">
               <div className="doughnut-chart-container">
-                <ResponsiveContainer width="100%" height={250}>
+                <ResponsiveContainer width="100%" height={180}>
                   <PieChart>
                     <Pie
                       data={roomTypeData}
