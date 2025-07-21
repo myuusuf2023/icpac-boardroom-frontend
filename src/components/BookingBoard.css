@@ -855,7 +855,7 @@
   max-width: 600px;
   width: 100%;
   padding: 20px;
-  max-height: 85vh;
+  max-height: 90vh;
   overflow-y: auto;
 }
 
@@ -1899,7 +1899,7 @@
 .room-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 16px;
 }
 
@@ -1923,9 +1923,10 @@
 .capacity-indicator {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
   gap: 4px;
   min-width: 80px;
+  flex-shrink: 0;
 }
 
 .capacity-visual {
