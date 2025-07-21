@@ -132,7 +132,7 @@ const BookingBoard = () => {
       localStorage.setItem('icpac_current_user', JSON.stringify(user));
 
       // Set admin status based on user role
-      if (user.role === 'super_admin') {
+      if (user.role === 'super_admin' || user.role === 'room_admin') {
         setIsAdmin(true);
         localStorage.setItem('icpac_admin', 'true');
       }
@@ -337,14 +337,20 @@ const BookingBoard = () => {
   // Approval functions
   const canApproveBooking = (booking) => {
     if (!currentUser) return false;
+    
+    // Super admin can approve any booking
     if (currentUser.role === 'super_admin') return true;
+    
+    // Room admin can approve bookings for rooms they manage
     if (currentUser.role === 'room_admin') {
       return currentUser.managedRooms && currentUser.managedRooms.includes(booking.roomId);
     }
+    
     return false;
   };
 
   const approveBooking = (bookingId) => {
+    console.log('approveBooking called with ID:', bookingId, 'Current user:', currentUser);
     if (window.confirm('Are you sure you want to approve this booking?')) {
       const updatedBookings = bookings.map(booking =>
         booking.id === bookingId
@@ -358,10 +364,12 @@ const BookingBoard = () => {
       );
       setBookings(updatedBookings);
       saveBookingsToStorage(updatedBookings);
+      console.log('Booking approved successfully');
     }
   };
 
   const rejectBooking = (bookingId) => {
+    console.log('rejectBooking called with ID:', bookingId, 'Current user:', currentUser);
     if (window.confirm('Are you sure you want to reject this booking?')) {
       const updatedBookings = bookings.map(booking =>
         booking.id === bookingId
@@ -375,6 +383,7 @@ const BookingBoard = () => {
       );
       setBookings(updatedBookings);
       saveBookingsToStorage(updatedBookings);
+      console.log('Booking rejected successfully');
     }
   };
 
@@ -391,6 +400,12 @@ const BookingBoard = () => {
       setCurrentUser(userData);
       setIsAuthenticated(true);
       setShowLandingPage(false);
+      
+      // Ensure admin status is set correctly based on user role
+      if (userData.role === 'super_admin' || userData.role === 'room_admin') {
+        setIsAdmin(true);
+        localStorage.setItem('icpac_admin', 'true');
+      }
     }
 
     // Load users or create default super admin
@@ -494,7 +509,7 @@ const BookingBoard = () => {
       }
 
       // Apply approval filter (only for admins who can see all statuses)
-      if (approvalFilter !== 'all' && canApproveBooking(booking)) {
+      if (approvalFilter !== 'all' && (currentUser && (currentUser.role === 'super_admin' || currentUser.role === 'room_admin'))) {
         const bookingStatus = booking.approvalStatus || 'pending';
         if (bookingStatus !== approvalFilter) {
           return false;
@@ -534,7 +549,7 @@ const BookingBoard = () => {
       }
 
       // Apply approval filter (only for admins who can see all statuses)
-      if (approvalFilter !== 'all' && canApproveBooking(booking)) {
+      if (approvalFilter !== 'all' && (currentUser && (currentUser.role === 'super_admin' || currentUser.role === 'room_admin'))) {
         const bookingStatus = booking.approvalStatus || 'pending';
         if (bookingStatus !== approvalFilter) {
           return false;
@@ -984,14 +999,20 @@ const BookingBoard = () => {
                                     {canApproveBooking(booking) && (!booking.approvalStatus || booking.approvalStatus === 'pending') && (
                                       <div className="approval-controls">
                                         <button
-                                          onClick={() => approveBooking(booking.id)}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            approveBooking(booking.id);
+                                          }}
                                           className="approve-booking-btn"
                                           title="Approve this booking"
                                         >
                                           ✅ Approve
                                         </button>
                                         <button
-                                          onClick={() => rejectBooking(booking.id)}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            rejectBooking(booking.id);
+                                          }}
                                           className="reject-booking-btn"
                                           title="Reject this booking"
                                         >
