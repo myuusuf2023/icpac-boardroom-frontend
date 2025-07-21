@@ -2476,7 +2476,7 @@
 
 .floating-input:focus + .floating-label,
 .floating-input.has-value + .floating-label {
-  transform: translateY(-0.75rem) scale(0.85);
+  transform: translateY(-1.5rem) scale(0.85);
   color: #034930;
   font-weight: 600;
 }
@@ -3289,7 +3289,7 @@
 
 .modern-input:focus + .floating-label,
 .modern-input.has-value + .floating-label {
-  transform: translateY(-0.75rem) scale(0.85);
+  transform: translateY(-1.5rem) scale(0.85);
   color: #034930;
   font-weight: 600;
 }
@@ -3444,7 +3444,7 @@
 
 .modern-textarea:focus + .floating-label,
 .modern-textarea.has-value + .floating-label {
-  transform: translateY(-0.75rem) scale(0.85);
+  transform: translateY(-1.5rem) scale(0.85);
   color: #034930;
   font-weight: 600;
 }
@@ -3472,7 +3472,7 @@
 
 .modern-number-input:focus + .floating-label,
 .modern-number-input.has-value + .floating-label {
-  transform: translateY(-0.75rem) scale(0.85);
+  transform: translateY(-1.5rem) scale(0.85);
   color: #034930;
   font-weight: 600;
 }
