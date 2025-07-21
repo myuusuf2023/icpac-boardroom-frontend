@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  icpac-booking-system:
+    build: .
+    container_name: icpac-booking-frontend
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    volumes:
+      # Optional: Mount for persistent data storage
+      - booking_data:/usr/share/nginx/html/data
+    networks:
+      - icpac-network
+
+  # Optional: Add database service later
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: icpac-booking-db
+  #   environment:
+  #     POSTGRES_DB: icpac_bookings
+  #     POSTGRES_USER: icpac_user
+  #     POSTGRES_PASSWORD: your_secure_password
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   networks:
+  #     - icpac-network
+
+volumes:
+  booking_data:
+  # postgres_data:
+
+networks:
+  icpac-network:
+    driver: bridge
