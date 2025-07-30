@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useApp } from '../context/AppContext';
 import './BookingBoard.css';
 
 // Utility function for amenity icons
@@ -18,6 +19,14 @@ const getAmenityIcon = (amenity) => {
 };
 
 const BookingBoard = () => {
+  // Get data from context (API integrated)
+  const { 
+    rooms: contextRooms, 
+    bookings: contextBookings, 
+    user, 
+    createBooking: apiCreateBooking
+  } = useApp();
+
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedTime, setSelectedTime] = useState('');
   const [rooms, setRooms] = useState([]);
@@ -482,6 +491,11 @@ const BookingBoard = () => {
     return timeSlots.findIndex(slot => slot === time);
   };
 
+  const isWeekend = (date) => {
+    const dayOfWeek = new Date(date).getDay();
+    return dayOfWeek === 0 || dayOfWeek === 6; // Sunday = 0, Saturday = 6
+  };
+
   const isTimeSlotInPast = (date, time) => {
     const now = new Date();
     const slotDate = new Date(date);
@@ -628,6 +642,12 @@ const BookingBoard = () => {
   };
 
   const handleBooking = (room, time) => {
+    // Check if the selected date is a weekend
+    if (isWeekend(selectedDate)) {
+      alert('Cannot book on weekends (Saturday and Sunday). Please select a weekday.');
+      return;
+    }
+
     // Check if the time slot is in the past
     if (isTimeSlotInPast(selectedDate, time)) {
       alert('Cannot book past time slots. Please select a future time.');
@@ -942,10 +962,16 @@ const BookingBoard = () => {
                             const isBooked = isSlotBooked(room.id, time);
                             const booking = getBookingDetails(room.id, time);
                             const isPast = isTimeSlotInPast(selectedDate, time);
+                            const isWeekendDay = isWeekend(selectedDate);
 
                             return (
                               <td key={time}>
-                                {isBooked && isPast ? (
+                                {isWeekendDay ? (
+                                  <div className="time-slot weekend-blocked">
+                                    <div className="slot-title">Weekend</div>
+                                    <div className="slot-subtitle">Not Available</div>
+                                  </div>
+                                ) : isBooked && isPast ? (
                                   <div className="time-slot past">
                                     <div className="slot-title">Past</div>
                                     <div className="slot-subtitle">{booking.title}</div>
