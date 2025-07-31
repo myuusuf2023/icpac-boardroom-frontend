@@ -1931,10 +1931,14 @@ const UserSignupModal = ({ onSignup, onCancel, onSwitchToLogin }) => {
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const allowedDomains = ['@icpac.net', '@igad.int'];
+    
     if (!formData.email) {
       errors.email = 'Email is required';
     } else if (!emailRegex.test(formData.email)) {
       errors.email = 'Please enter a valid email address';
+    } else if (!allowedDomains.some(domain => formData.email.toLowerCase().endsWith(domain))) {
+      errors.email = 'Email must be from @icpac.net or @igad.int domain';
     }
 
     // Password validation
@@ -2149,7 +2153,15 @@ const ForgotPasswordModal = ({ onCancel, onBackToLogin }) => {
 
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    const allowedDomains = ['@icpac.net', '@igad.int'];
+    
+    // Check basic email format first
+    if (!emailRegex.test(email)) {
+      return false;
+    }
+    
+    // Check if email ends with allowed domains
+    return allowedDomains.some(domain => email.toLowerCase().endsWith(domain));
   };
 
   const handleSubmit = async (e) => {
@@ -2161,7 +2173,7 @@ const ForgotPasswordModal = ({ onCancel, onBackToLogin }) => {
     }
     
     if (!validateEmail(email)) {
-      setValidationError('Please enter a valid email address');
+      setValidationError('Email must be from @icpac.net or @igad.int domain');
       return;
     }
     
@@ -2769,6 +2781,14 @@ const UserRegistrationModal = ({ rooms, onRegister, onCancel }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    // Validate email domain
+    const allowedDomains = ['@icpac.net', '@igad.int'];
+    if (!allowedDomains.some(domain => formData.email.toLowerCase().endsWith(domain))) {
+      alert('Email must be from @icpac.net or @igad.int domain');
+      return;
+    }
+    
     onRegister(formData);
   };
 
