@@ -4,16 +4,28 @@
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#10b981" />
+    <meta name="theme-color" content="#034930" />
     <meta
       name="description"
-      content="ICPAC Boardroom Booking System - Reserve meeting rooms and conference facilities at IGAD Climate Prediction and Applications Centre"
+      content="Professional meeting room booking system for ICPAC staff - Book rooms, manage meetings, and coordinate with your team seamlessly"
     />
-    <meta name="keywords" content="ICPAC, boardroom, booking, meeting rooms, conference, IGAD, climate, reservation" />
+    <meta name="keywords" content="ICPAC, boardroom, booking, meeting rooms, conference, IGAD, climate, reservation, PWA, mobile" />
     <meta name="author" content="Mohamed Yusuf Ali" />
+    
+    <!-- PWA Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="ICPAC Booking" />
+    <meta name="msapplication-TileColor" content="#034930" />
+    <meta name="msapplication-tap-highlight" content="no" />
+    
+    <!-- Icons -->
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" sizes="any" />
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/icpaclogo.png" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <title>ICPAC Boardroom Booking System</title>
+    
+    <title>ICPAC Internal Booking System</title>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
@@ -28,5 +40,58 @@
       To begin the development, run `npm start` or `yarn start`.
       To create a production bundle, use `npm run build` or `yarn build`.
     -->
+    
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js')
+            .then(function(registration) {
+              console.log('SW registered: ', registration);
+              
+              // Check for updates
+              registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                if (newWorker == null) return;
+                
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state == 'installed') {
+                    if (navigator.serviceWorker.controller) {
+                      // New update available
+                      if (confirm('New version available! Reload to update?')) {
+                        window.location.reload();
+                      }
+                    }
+                  }
+                });
+              });
+            })
+            .catch(function(registrationError) {
+              console.log('SW registration failed: ', registrationError);
+            });
+        });
+      }
+      
+      // Install prompt for PWA
+      let deferredPrompt;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        // Prevent Chrome 67 and earlier from automatically showing the prompt
+        e.preventDefault();
+        // Stash the event so it can be triggered later
+        deferredPrompt = e;
+        
+        // Show install button/banner (can be implemented in React component)
+        console.log('PWA install prompt available');
+        
+        // Optionally, send an event to React app
+        window.dispatchEvent(new CustomEvent('pwa-install-available'));
+      });
+      
+      // Track PWA installation
+      window.addEventListener('appinstalled', (evt) => {
+        console.log('PWA was installed successfully');
+        // Optional: Track installation analytics
+      });
+    </script>
   </body>
 </html>

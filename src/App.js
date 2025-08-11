@@ -4,6 +4,7 @@ import Footer from './components/Footer';
 import BookingBoard from './components/BookingBoard';
 import DashboardPage from './components/DashboardPage';
 import LoginForm from './components/auth/LoginForm';
+import ProcurementRequisitionForm from './components/ProcurementRequisitionForm';
 
 // Protected Route Component - let BookingBoard handle its own auth flow
 const ProtectedRoute = ({ children }) => {
@@ -49,6 +50,18 @@ const AppContent = () => {
             element={
               <ProtectedRoute>
                 <DashboardPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/procurement" 
+            element={
+              <ProtectedRoute>
+                <div className="flex-1 flex items-center justify-center p-4">
+                  <div className="max-w-4xl w-full">
+                    <ProcurementRequisitionForm />
+                  </div>
+                </div>
               </ProtectedRoute>
             } 
           />

@@ -1,0 +1,31 @@
+#!/usr/bin/expect -f
+
+set timeout 300
+set hostname "77.237.247.119"
+set username "root"
+set password "ikraan2019#"
+
+# Upload files
+puts "📤 Uploading deployment package..."
+spawn scp /home/yusuf/icpac/icpac-boardroom-frontend/icpac-booking.tar.gz root@77.237.247.119:/tmp/
+expect "password:"
+send "$password\r"
+expect eof
+
+puts "📤 Uploading deployment script..."
+spawn scp /home/yusuf/icpac/icpac-boardroom-frontend/complete-deployment.sh root@77.237.247.119:/tmp/
+expect "password:"
+send "$password\r"
+expect eof
+
+# Connect and deploy
+puts "🚀 Connecting to VPS and deploying..."
+spawn ssh root@77.237.247.119
+expect "password:"
+send "$password\r"
+expect "# "
+send "cd /tmp && chmod +x complete-deployment.sh && ./complete-deployment.sh\r"
+expect eof
+
+puts "✅ Deployment completed!"
+puts "🌐 Access your application at: http://77.237.247.119"

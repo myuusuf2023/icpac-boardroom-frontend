@@ -1,0 +1,26 @@
+# ICPAC Booking System - Cron Jobs for Automation
+# Install with: crontab scripts/crontab
+
+# Database backup every day at 2:00 AM
+0 2 * * * /usr/local/bin/docker-compose -f /path/to/docker-compose.production.yml exec -T backup /backup.sh >> /var/log/icpac-backup.log 2>&1
+
+# SSL certificate renewal every month on the 1st at 3:00 AM
+0 3 1 * * /usr/local/bin/docker-compose -f /path/to/docker-compose.production.yml run --rm certbot renew >> /var/log/icpac-ssl-renewal.log 2>&1
+
+# Clean up old log files every week on Sunday at 4:00 AM
+0 4 * * 0 find /path/to/logs -name "*.log" -type f -mtime +30 -delete
+
+# System health check every 15 minutes
+*/15 * * * * /usr/local/bin/docker-compose -f /path/to/docker-compose.production.yml ps | grep -q "Up" || /path/to/scripts/alert.sh "ICPAC Booking System containers are down" >> /var/log/icpac-health.log 2>&1
+
+# Restart celery workers daily at 5:00 AM to prevent memory leaks
+0 5 * * * /usr/local/bin/docker-compose -f /path/to/docker-compose.production.yml restart celery >> /var/log/icpac-celery-restart.log 2>&1
+
+# Clean up unused Docker images and volumes weekly on Saturday at 6:00 AM
+0 6 * * 6 /usr/bin/docker system prune -f && /usr/bin/docker volume prune -f >> /var/log/icpac-cleanup.log 2>&1
+
+# Rotate nginx logs daily at 1:00 AM
+0 1 * * * /usr/local/bin/docker-compose -f /path/to/docker-compose.production.yml exec -T nginx nginx -s reopen >> /var/log/icpac-nginx-rotate.log 2>&1
+
+# Send weekly system status report every Monday at 9:00 AM
+0 9 * * 1 /path/to/scripts/weekly-report.sh >> /var/log/icpac-report.log 2>&1

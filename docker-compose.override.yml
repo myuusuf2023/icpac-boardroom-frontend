@@ -1,0 +1,53 @@
+# Docker Compose Override for Development
+# This file is automatically loaded by docker-compose for development
+
+version: '3.8'
+
+services:
+  # Development overrides for backend
+  backend:
+    environment:
+      DEBUG: 'True'
+      ALLOWED_HOSTS: '*'
+      SECURE_SSL_REDIRECT: 'False'
+      SESSION_COOKIE_SECURE: 'False'
+      CSRF_COOKIE_SECURE: 'False'
+    volumes:
+      # Mount source code for hot reload
+      - ./icpac-booking-backend:/app
+    command: python manage.py runserver 0.0.0.0:8000
+    ports:
+      - "8000:8000"
+  
+  # Development overrides for frontend
+  frontend:
+    build:
+      target: build  # Stop at build stage for development
+    command: npm start
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+  
+  # Development database with exposed port
+  postgres:
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: devpassword123
+  
+  # Development redis with exposed port
+  redis:
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass devpassword123
+  
+  # Disable SSL in development
+  nginx:
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.dev.conf:/etc/nginx/conf.d/default.conf

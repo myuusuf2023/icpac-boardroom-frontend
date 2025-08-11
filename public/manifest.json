@@ -1,7 +1,7 @@
 {
-  "short_name": "ICPAC Boardroom",
-  "name": "ICPAC Boardroom Booking System",
-  "description": "Room reservation system for ICPAC meeting rooms and conference facilities",
+  "short_name": "ICPAC Booking",
+  "name": "ICPAC Internal Booking System",
+  "description": "Professional meeting room booking system for ICPAC staff - Book rooms, manage meetings, and coordinate with your team seamlessly",
   "icons": [
     {
       "src": "favicon.ico",
@@ -11,16 +11,62 @@
     {
       "src": "icpaclogo.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any maskable"
     },
     {
       "src": "icpaclogo.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#10b981",
-  "background_color": "#f0fdf4"
+  "theme_color": "#034930",
+  "background_color": "#ebf8ff",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "categories": ["business", "productivity", "office"],
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Quick Booking",
+      "short_name": "Book Now",
+      "description": "Create a new room booking instantly",
+      "url": "/?action=quick-book",
+      "icons": [
+        {
+          "src": "icpaclogo.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "My Bookings",
+      "short_name": "My Bookings", 
+      "description": "View and manage your current bookings",
+      "url": "/?view=my-bookings",
+      "icons": [
+        {
+          "src": "icpaclogo.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Admin Panel",
+      "short_name": "Admin",
+      "description": "Access administrative functions",
+      "url": "/?view=admin",
+      "icons": [
+        {
+          "src": "icpaclogo.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
 }

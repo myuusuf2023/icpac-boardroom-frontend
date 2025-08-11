@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import emailService from '../services/emailService';
+import EmailSettingsPanel from './EmailSettingsPanel';
 import './BookingBoard.css';
+import '../services/emailNotifications.css';
 
 // Utility function for amenity icons
 const getAmenityIcon = (amenity) => {
@@ -20,10 +23,10 @@ const getAmenityIcon = (amenity) => {
 
 const BookingBoard = () => {
   // Get data from context (API integrated)
-  const { 
-    rooms: contextRooms, 
-    bookings: contextBookings, 
-    user, 
+  const {
+    rooms: contextRooms,
+    bookings: contextBookings,
+    user,
     createBooking: apiCreateBooking
   } = useApp();
 
@@ -47,6 +50,17 @@ const BookingBoard = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showLandingPage, setShowLandingPage] = useState(true);
   const [approvalFilter, setApprovalFilter] = useState('all'); // all, pending, approved, rejected
+  const [showEmailSettings, setShowEmailSettings] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem('icpac_dark_mode');
+    return saved ? JSON.parse(saved) : false;
+  });
+  const [selectedRoomId, setSelectedRoomId] = useState('');
+  const [selectedMeetingSpace, setSelectedMeetingSpace] = useState(null);
+  const [showMeetingSpaceModal, setShowMeetingSpaceModal] = useState(false);
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
 
   // localStorage functions
   const saveBookingsToStorage = (bookingsData) => {
@@ -54,6 +68,38 @@ const BookingBoard = () => {
       localStorage.setItem('icpac_bookings', JSON.stringify(bookingsData));
     } catch (error) {
       console.error('Error saving bookings to localStorage:', error);
+    }
+  };
+
+  const saveMeetingSpaceSelection = (spaceId) => {
+    try {
+      if (currentUser) {
+        localStorage.setItem(`icpac_selected_space_${currentUser.username}`, spaceId);
+      }
+    } catch (error) {
+      console.error('Error saving meeting space selection:', error);
+    }
+  };
+
+  const loadMeetingSpaceSelection = () => {
+    try {
+      if (currentUser) {
+        return localStorage.getItem(`icpac_selected_space_${currentUser.username}`);
+      }
+      return null;
+    } catch (error) {
+      console.error('Error loading meeting space selection:', error);
+      return null;
+    }
+  };
+
+  const clearMeetingSpaceSelection = () => {
+    try {
+      if (currentUser) {
+        localStorage.removeItem(`icpac_selected_space_${currentUser.username}`);
+      }
+    } catch (error) {
+      console.error('Error clearing meeting space selection:', error);
     }
   };
 
@@ -140,6 +186,24 @@ const BookingBoard = () => {
       setShowUserLogin(false);
       localStorage.setItem('icpac_current_user', JSON.stringify(user));
 
+      // Delay meeting space check to allow rooms to be initialized
+      setTimeout(() => {
+        const savedSpace = loadMeetingSpaceSelection();
+        if (savedSpace && rooms.length > 0) {
+          const space = rooms.find(room => room.id.toString() === savedSpace);
+          if (space) {
+            setSelectedMeetingSpace(space);
+            setSelectedRoomId(savedSpace);
+          } else {
+            // If saved space no longer exists, show modal
+            setShowMeetingSpaceModal(true);
+          }
+        } else {
+          // Show meeting space selection modal for new/returning users
+          setShowMeetingSpaceModal(true);
+        }
+      }, 100);
+
       // Set admin status based on user role
       if (user.role === 'super_admin' || user.role === 'room_admin') {
         setIsAdmin(true);
@@ -151,17 +215,31 @@ const BookingBoard = () => {
   };
 
   const handleUserLogout = () => {
+    clearMeetingSpaceSelection();
     setCurrentUser(null);
+    setSelectedMeetingSpace(null);
+    setSelectedRoomId('');
     setIsAdmin(false);
     setIsAuthenticated(false);
     setShowLandingPage(true);
+    setShowMeetingSpaceModal(false);
     localStorage.removeItem('icpac_current_user');
     localStorage.removeItem('icpac_admin');
   };
 
+  const handleMeetingSpaceSelection = (roomId) => {
+    const selectedRoom = rooms.find(room => room.id.toString() === roomId.toString());
+    if (selectedRoom) {
+      setSelectedMeetingSpace(selectedRoom);
+      setSelectedRoomId(roomId.toString());
+      saveMeetingSpaceSelection(roomId);
+      setShowMeetingSpaceModal(false);
+    }
+  };
+
   const handleUserSignup = (userData) => {
     // Check if email already exists
-    const emailExists = users.some(user => user.email.toLowerCase() === userData.email.toLowerCase());
+    const emailExists = users.some(user => user.email && userData.email && user.email.toLowerCase() === userData.email.toLowerCase());
     if (emailExists) {
       alert('Error: A user with this email address already exists. Please use a different email.');
       return;
@@ -181,14 +259,14 @@ const BookingBoard = () => {
     const updatedUsers = [...users, newUser];
     setUsers(updatedUsers);
     saveUsersToStorage(updatedUsers);
-    
+
     // Auto-login the new user
     setCurrentUser(newUser);
     setIsAuthenticated(true);
     setShowLandingPage(false);
     setShowSignup(false);
     localStorage.setItem('icpac_current_user', JSON.stringify(newUser));
-    
+
     alert('Account created successfully! You are now logged in.');
   };
 
@@ -234,10 +312,15 @@ const BookingBoard = () => {
   };
 
   const getVisibleRooms = () => {
+    // If user has selected a specific meeting space, show only that space
+    if (selectedMeetingSpace && currentUser) {
+      return [selectedMeetingSpace];
+    }
+
     // If not logged in, show all rooms for general viewing
     if (!currentUser) return rooms;
 
-    // Super admin can see all rooms
+    // Super admin can see all rooms (but still filtered by meeting space selection)
     if (currentUser.role === 'super_admin') return rooms;
 
     // Room admin can only see their assigned rooms
@@ -249,6 +332,30 @@ const BookingBoard = () => {
 
     // Regular users can see all rooms for booking (but with limited management)
     return rooms;
+  };
+
+  const getFilteredRooms = () => {
+    try {
+      const visibleRooms = getVisibleRooms();
+      console.log('getFilteredRooms - selectedRoomId:', selectedRoomId);
+      console.log('getFilteredRooms - visibleRooms:', visibleRooms);
+      
+      // If no room is selected or "all" is selected, show all rooms
+      if (!selectedRoomId || selectedRoomId === '' || selectedRoomId === 'all') {
+        return visibleRooms;
+      }
+      
+      // Filter to show only the selected room
+      const filteredRooms = visibleRooms.filter(room => {
+        return room && room.id && room.id.toString() === selectedRoomId.toString();
+      });
+      
+      console.log('Filtered rooms:', filteredRooms);
+      return filteredRooms;
+    } catch (error) {
+      console.error('Error in getFilteredRooms:', error);
+      return [];
+    }
   };
 
   const getGroupedRooms = () => {
@@ -313,11 +420,29 @@ const BookingBoard = () => {
     return booking.organizer === currentUser.email; // Users can manage their own bookings
   };
 
-  const cancelBooking = (bookingId) => {
+  const cancelBooking = async (bookingId) => {
+    const bookingToCancel = bookings.find(booking => booking.id === bookingId);
+    const roomToCancel = rooms.find(room => room.id === bookingToCancel?.roomId);
+    
     if (window.confirm('Are you sure you want to cancel this booking?')) {
       const updatedBookings = bookings.filter(booking => booking.id !== bookingId);
       setBookings(updatedBookings);
       saveBookingsToStorage(updatedBookings);
+      
+      // 📧 Send cancellation notification
+      try {
+        if (currentUser && bookingToCancel && roomToCancel) {
+          const cancellationReason = prompt('Reason for cancellation (optional):') || 'No reason provided';
+          await emailService.sendCancellationNotification(
+            bookingToCancel, 
+            roomToCancel, 
+            currentUser, 
+            cancellationReason
+          );
+        }
+      } catch (error) {
+        console.error('Error sending cancellation notification:', error);
+      }
     }
   };
 
@@ -346,54 +471,92 @@ const BookingBoard = () => {
   // Approval functions
   const canApproveBooking = (booking) => {
     if (!currentUser) return false;
-    
+
     // Super admin can approve any booking
     if (currentUser.role === 'super_admin') return true;
-    
+
     // Room admin can approve bookings for rooms they manage
     if (currentUser.role === 'room_admin') {
       return currentUser.managedRooms && currentUser.managedRooms.includes(booking.roomId);
     }
-    
+
     return false;
   };
 
-  const approveBooking = (bookingId) => {
+  const approveBooking = async (bookingId) => {
     console.log('approveBooking called with ID:', bookingId, 'Current user:', currentUser);
     if (window.confirm('Are you sure you want to approve this booking?')) {
+      const bookingToApprove = bookings.find(booking => booking.id === bookingId);
+      const selectedRoom = rooms.find(room => room.id === bookingToApprove.roomId);
+      const bookingUser = users.find(user => user.email === bookingToApprove.userEmail || user.name === bookingToApprove.organizer);
+
       const updatedBookings = bookings.map(booking =>
         booking.id === bookingId
-          ? { 
-              ...booking, 
-              approvalStatus: 'approved',
-              approvedBy: currentUser.name,
-              approvedAt: new Date().toISOString()
-            }
+          ? {
+            ...booking,
+            approvalStatus: 'approved',
+            approvedBy: currentUser.name,
+            approvedAt: new Date().toISOString()
+          }
           : booking
       );
       setBookings(updatedBookings);
       saveBookingsToStorage(updatedBookings);
+
+      // 📧 Send approval notification to the user
+      if (bookingUser && selectedRoom) {
+        try {
+          await emailService.sendApprovalNotification(bookingToApprove, selectedRoom, bookingUser, currentUser.name);
+        } catch (error) {
+          console.error('Error sending approval notification:', error);
+        }
+      }
+
       console.log('Booking approved successfully');
     }
   };
 
-  const rejectBooking = (bookingId) => {
+  const rejectBooking = async (bookingId) => {
     console.log('rejectBooking called with ID:', bookingId, 'Current user:', currentUser);
-    if (window.confirm('Are you sure you want to reject this booking?')) {
+    const reason = prompt('Please provide a reason for rejection (optional):');
+    if (reason !== null) { // User didn't cancel the prompt
+      const bookingToReject = bookings.find(booking => booking.id === bookingId);
+      const selectedRoom = rooms.find(room => room.id === bookingToReject.roomId);
+      const bookingUser = users.find(user => user.email === bookingToReject.userEmail || user.name === bookingToReject.organizer);
+
       const updatedBookings = bookings.map(booking =>
         booking.id === bookingId
-          ? { 
-              ...booking, 
-              approvalStatus: 'rejected',
-              approvedBy: currentUser.name,
-              approvedAt: new Date().toISOString()
-            }
+          ? {
+            ...booking,
+            approvalStatus: 'rejected',
+            approvedBy: currentUser.name,
+            approvedAt: new Date().toISOString(),
+            rejectionReason: reason
+          }
           : booking
       );
       setBookings(updatedBookings);
       saveBookingsToStorage(updatedBookings);
+
+      // 📧 Send rejection notification to the user
+      if (bookingUser && selectedRoom) {
+        try {
+          await emailService.sendRejectionNotification(bookingToReject, selectedRoom, bookingUser, currentUser.name, reason);
+        } catch (error) {
+          console.error('Error sending rejection notification:', error);
+        }
+      }
+
       console.log('Booking rejected successfully');
     }
+  };
+
+  // Dark mode toggle
+  const toggleDarkMode = () => {
+    const newMode = !isDarkMode;
+    setIsDarkMode(newMode);
+    localStorage.setItem('icpac_dark_mode', JSON.stringify(newMode));
+    document.body.classList.toggle('dark-mode', newMode);
   };
 
   // Check for admin status and current user on load
@@ -409,7 +572,7 @@ const BookingBoard = () => {
       setCurrentUser(userData);
       setIsAuthenticated(true);
       setShowLandingPage(false);
-      
+
       // Ensure admin status is set correctly based on user role
       if (userData.role === 'super_admin' || userData.role === 'room_admin') {
         setIsAdmin(true);
@@ -482,6 +645,51 @@ const BookingBoard = () => {
     '08:00', '09:00', '10:00', '11:00', '12:00', '13:00',
     '14:00', '15:00', '16:00'
   ];
+
+  // Apply dark mode on initial load
+  useEffect(() => {
+    document.body.classList.toggle('dark-mode', isDarkMode);
+  }, [isDarkMode]);
+
+  // PWA install prompt handling
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallPrompt(true);
+    };
+
+    const handleAppInstalled = () => {
+      console.log('PWA installed successfully');
+      setShowInstallPrompt(false);
+      setDeferredPrompt(null);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  // Install PWA function
+  const installPWA = async () => {
+    if (!deferredPrompt) return;
+    
+    deferredPrompt.prompt();
+    const choiceResult = await deferredPrompt.userChoice;
+    
+    if (choiceResult.outcome === 'accepted') {
+      console.log('User accepted PWA install');
+    } else {
+      console.log('User dismissed PWA install');
+    }
+    
+    setDeferredPrompt(null);
+    setShowInstallPrompt(false);
+  };
 
   const formatDate = (date) => {
     return date.toISOString().split('T')[0];
@@ -659,7 +867,7 @@ const BookingBoard = () => {
     setShowBookingForm(true);
   };
 
-  const confirmBooking = (bookingData) => {
+  const confirmBooking = async (bookingData) => {
     // Enhanced validation for different booking types
     if (bookingData.bookingType === 'hourly') {
       if (!canBookDuration(selectedRoom.id, selectedTime, bookingData.duration)) {
@@ -705,6 +913,29 @@ const BookingBoard = () => {
     // Send procurement notification if there are orders
     sendProcurementNotification(newBooking);
 
+    // 📧 EMAIL NOTIFICATIONS - Send booking confirmation and admin notifications
+    try {
+      if (currentUser) {
+        // 1. Send booking confirmation to the user
+        await emailService.sendBookingConfirmation(newBooking, selectedRoom, currentUser);
+        
+        // 2. Send admin notifications for new booking
+        const roomAdmins = emailService.getRoomAdmins(selectedRoom.id, users);
+        if (roomAdmins.length > 0) {
+          await emailService.sendAdminNotification(newBooking, selectedRoom, currentUser, roomAdmins);
+        }
+        
+        // 3. Schedule 30-minute meeting reminder
+        const reminderResult = emailService.scheduleReminder(newBooking, selectedRoom, currentUser);
+        if (reminderResult.success) {
+          console.log(`⏰ Meeting reminder scheduled for: ${reminderResult.reminderTime}`);
+        }
+      }
+    } catch (error) {
+      console.error('Email notification error:', error);
+      // Don't block booking if email fails
+    }
+
     setShowBookingForm(false);
     setSelectedRoom(null);
     setSelectedTime('');
@@ -719,7 +950,7 @@ const BookingBoard = () => {
           onSignup={() => setShowSignup(true)}
           onViewDashboard={() => window.location.href = '/dashboard'}
         />
-        
+
         {/* Login Modal */}
         {showUserLogin && (
           <UserLoginModal
@@ -735,7 +966,7 @@ const BookingBoard = () => {
             }}
           />
         )}
-        
+
         {/* Signup Modal */}
         {showSignup && (
           <UserSignupModal
@@ -747,7 +978,16 @@ const BookingBoard = () => {
             }}
           />
         )}
-        
+
+        {/* Meeting Space Selection Modal */}
+        {showMeetingSpaceModal && (
+          <MeetingSpaceSelectionModal
+            rooms={rooms}
+            onSelect={handleMeetingSpaceSelection}
+            currentUser={currentUser}
+          />
+        )}
+
         {/* Forgot Password Modal */}
         {showForgotPassword && (
           <ForgotPasswordModal
@@ -773,8 +1013,8 @@ const BookingBoard = () => {
               <img src="/ICPAC_Website_Header_Logo.svg" alt="ICPAC Logo" className="icpac-logo" />
             </div>
             <div className="title-section">
-              <h1 className="booking-title">ICPAC MEETING BOOKING SYSTEM</h1>
-              <p className="booking-subtitle">Reserve your meeting space with ease</p>
+              <h1 className="booking-title">ICPAC INTERNAL BOOKING SYSTEM</h1>
+              <p className="booking-subtitle">Reserve your meeting space with ease - Book conference rooms, manage schedules, and collaborate seamlessly across ICPAC facilities</p>
             </div>
           </div>
         </div>
@@ -783,6 +1023,7 @@ const BookingBoard = () => {
         <div className="date-section">
           <div className="date-header">
             <h2 className="date-title">Select Date</h2>
+            
             <div className="admin-controls">
               {currentUser ? (
                 <div className="user-panel">
@@ -816,6 +1057,29 @@ const BookingBoard = () => {
                     </button>
                   )}
                   <button
+                    onClick={() => setShowEmailSettings(true)}
+                    className="email-settings-btn"
+                    title="Email Notification Settings"
+                  >
+                    📧 Email Settings
+                  </button>
+                  <button
+                    onClick={toggleDarkMode}
+                    className="dark-mode-btn"
+                    title={`Switch to ${isDarkMode ? 'Light' : 'Dark'} Mode`}
+                  >
+                    {isDarkMode ? '☀️' : '🌙'} {isDarkMode ? 'Light' : 'Dark'} Mode
+                  </button>
+                  {showInstallPrompt && (
+                    <button
+                      onClick={installPWA}
+                      className="install-pwa-btn"
+                      title="Install app on your device"
+                    >
+                      📱 Install App
+                    </button>
+                  )}
+                  <button
                     onClick={handleUserLogout}
                     className="admin-logout-btn"
                     title="Logout"
@@ -836,6 +1100,65 @@ const BookingBoard = () => {
               onChange={(e) => setSelectedDate(new Date(e.target.value))}
               className="date-picker-input"
             />
+            
+            {/* Meeting Space Dropdown - positioned below and to the right */}
+            <div style={{ marginTop: '12px', marginLeft: '40px' }}>
+              <div className="room-selector-container" style={{
+                background: 'linear-gradient(135deg, #f0fdf4, #e6fffa)', 
+                padding: '8px 12px', 
+                border: '1px solid #10b981', 
+                borderRadius: '25px', 
+                display: 'inline-block',
+                minWidth: '280px',
+                transition: 'all 0.3s ease',
+                cursor: 'pointer'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                e.target.style.transform = 'translateY(-1px)';
+                e.target.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.2)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'linear-gradient(135deg, #f0fdf4, #e6fffa)';
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = 'none';
+              }}>
+                <select
+                  id="room-selector"
+                  className="room-selector"
+                  value={selectedRoomId}
+                  onChange={(e) => {
+                    setSelectedRoomId(e.target.value);
+                    if (e.target.value) {
+                      const selectedSpace = rooms.find(room => room.id.toString() === e.target.value);
+                      setSelectedMeetingSpace(selectedSpace);
+                      saveMeetingSpaceSelection(e.target.value);
+                    } else {
+                      setSelectedMeetingSpace(null);
+                      clearMeetingSpaceSelection();
+                    }
+                  }}
+                  style={{
+                    fontSize: '14px', 
+                    padding: '6px 12px', 
+                    width: '100%',
+                    border: 'none',
+                    background: 'transparent',
+                    color: '#034930',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="">🏢 Select Meeting Space</option>
+                  {rooms.map(room => (
+                    <option key={room.id} value={room.id}>
+                      {room.name} (Cap: {room.capacity})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
 
           {/* Approval Filter for Admins */}
@@ -906,7 +1229,7 @@ const BookingBoard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {getVisibleRooms().length === 0 ? (
+                  {getFilteredRooms().length === 0 ? (
                     <tr>
                       <td colSpan={timeSlots.length + 1} className="no-rooms-message">
                         <div className="no-rooms-content">
@@ -921,7 +1244,7 @@ const BookingBoard = () => {
                       </td>
                     </tr>
                   ) : (
-                    getVisibleRooms().map(room => {
+                    getFilteredRooms().map(room => {
                       const categoryInfo = getCategoryInfo(room.category);
                       return (
                         <tr key={room.id} className="room-row">
@@ -979,8 +1302,8 @@ const BookingBoard = () => {
                                 ) : isBooked ? (
                                   <div className={`modern-time-slot booked ${booking.bookingType || 'hourly'} ${booking.approvalStatus || 'pending'}`}>
                                     <div className="slot-icon">
-                                      {booking.approvalStatus === 'approved' ? '✅' : 
-                                       booking.approvalStatus === 'rejected' ? '❌' : '⏳'}
+                                      {booking.approvalStatus === 'approved' ? '✅' :
+                                        booking.approvalStatus === 'rejected' ? '❌' : '⏳'}
                                     </div>
                                     <div className="slot-content">
                                       <div className="slot-title">{booking.title}</div>
@@ -1126,6 +1449,7 @@ const BookingBoard = () => {
             room={selectedRoom}
             time={selectedTime}
             date={selectedDate}
+            currentUser={currentUser}
             onConfirm={confirmBooking}
             onCancel={() => setShowBookingForm(false)}
           />
@@ -1143,7 +1467,8 @@ const BookingBoard = () => {
         {showEditForm && editingBooking && (
           <EditBookingForm
             booking={editingBooking}
-            rooms={getVisibleRooms()}
+            rooms={getFilteredRooms()}
+            currentUser={currentUser}
             onUpdate={updateBooking}
             onCancel={() => {
               setShowEditForm(false);
@@ -1169,6 +1494,17 @@ const BookingBoard = () => {
             bookings={bookings}
             rooms={rooms}
             onClose={() => setShowProcurementDashboard(false)}
+          />
+        )}
+
+        {showEmailSettings && (
+          <EmailSettingsPanel
+            user={currentUser}
+            onSettingsUpdate={(settings) => {
+              console.log('Email settings updated:', settings);
+              // You can add additional logic here to handle settings changes
+            }}
+            onClose={() => setShowEmailSettings(false)}
           />
         )}
 
@@ -1340,21 +1676,61 @@ const ProcurementOrdersSection = ({ orders, attendeeCount, onOrdersChange }) => 
   );
 };
 
-const BookingForm = ({ room, time, date, onConfirm, onCancel }) => {
+const BookingForm = ({ room, time, date, currentUser, onConfirm, onCancel }) => {
   const timeSlots = [
     '08:00', '09:00', '10:00', '11:00', '12:00', '13:00',
     '14:00', '15:00', '16:00'
   ];
 
+  // Get current time for today, or use selected time slot
+  const getCurrentTimeSlot = () => {
+    if (time) return time; // Always use time from clicked slot when available
+    
+    const now = new Date();
+    const selectedDate = new Date(date);
+    
+    // Only use current time logic if booking for today
+    const isToday = selectedDate.toDateString() === now.toDateString();
+    
+    if (!isToday) {
+      // For future dates, user must click on a specific time slot
+      return timeSlots[0]; // Fallback only
+    }
+    
+    const currentHour = now.getHours();
+    const currentMinutes = now.getMinutes();
+    
+    // If it's past the minute mark, go to next hour
+    const targetHour = currentMinutes > 0 ? currentHour + 1 : currentHour;
+    
+    // Format as HH:00 and find closest available slot
+    const timeString = `${targetHour.toString().padStart(2, '0')}:00`;
+    
+    // Find the closest available time slot for today
+    const availableSlot = timeSlots.find(slot => slot >= timeString);
+    return availableSlot || timeSlots[0];
+  };
+
+  // Calculate end time based on start time and duration
+  const calculateEndTime = (startTime, duration) => {
+    const startIndex = timeSlots.findIndex(slot => slot === startTime);
+    if (startIndex === -1) return timeSlots[1];
+    
+    const endIndex = Math.min(startIndex + duration, timeSlots.length - 1);
+    return timeSlots[endIndex];
+  };
+
+  const initialStartTime = getCurrentTimeSlot();
+
   const [formData, setFormData] = useState({
     title: '',
-    organizer: '',
+    organizer: currentUser ? currentUser.name : '',
     bookingType: 'hourly',
     duration: 1,
     startDate: date.toISOString().split('T')[0],
     endDate: date.toISOString().split('T')[0],
-    startTime: time || '08:00',
-    endTime: time ? (time === '16:00' ? '16:00' : timeSlots[timeSlots.findIndex(t => t === time) + 1]) : '09:00',
+    startTime: initialStartTime,
+    endTime: calculateEndTime(initialStartTime, 1),
     description: '',
     attendeeCount: 1,
     procurementOrders: []
@@ -1426,6 +1802,18 @@ const BookingForm = ({ room, time, date, onConfirm, onCancel }) => {
         }
       }
 
+      // Recalculate end time when duration changes
+      if (name === 'duration') {
+        const duration = parseInt(value);
+        newData.duration = duration; // Ensure duration is stored as integer
+        newData.endTime = calculateEndTime(prev.startTime, duration);
+      }
+
+      // Recalculate end time when start time changes
+      if (name === 'startTime') {
+        newData.endTime = calculateEndTime(value, parseInt(prev.duration));
+      }
+
       // Ensure end date is not before start date
       if (name === 'endDate' && new Date(value) < new Date(prev.startDate)) {
         newData.endDate = prev.startDate;
@@ -1439,7 +1827,7 @@ const BookingForm = ({ room, time, date, onConfirm, onCancel }) => {
     <div className="booking-modal-overlay">
       <div className="booking-modal-container">
         <button onClick={onCancel} className="booking-modal-close">×</button>
-        
+
         <div className="booking-modal-header">
           <div className="booking-header-icon">
             <span className="header-icon-bg">📅</span>
@@ -1469,7 +1857,7 @@ const BookingForm = ({ room, time, date, onConfirm, onCancel }) => {
               </div>
             </div>
           </div>
-          
+
           <div className="room-amenities">
             {room.amenities.map(amenity => (
               <span key={amenity} className="amenity-chip">
@@ -1703,8 +2091,8 @@ const BookingForm = ({ room, time, date, onConfirm, onCancel }) => {
                 <div className="capacity-indicator">
                   <span className="capacity-text">Max: {room.capacity}</span>
                   <div className="capacity-bar">
-                    <div 
-                      className="capacity-fill" 
+                    <div
+                      className="capacity-fill"
                       style={{ width: `${Math.min((formData.attendeeCount / room.capacity) * 100, 100)}%` }}
                     />
                   </div>
@@ -1770,7 +2158,7 @@ const UserLoginModal = ({ onLogin, onCancel, onSwitchToSignup, onForgotPassword 
     <div className="auth-modal-overlay">
       <div className="auth-modal-container">
         <button onClick={onCancel} className="auth-close-btn">×</button>
-        
+
         <div className="auth-split-layout">
           {/* Branding Sidebar */}
           <div className="auth-branding-sidebar">
@@ -1932,12 +2320,12 @@ const UserSignupModal = ({ onSignup, onCancel, onSwitchToLogin }) => {
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const allowedDomains = ['@icpac.net', '@igad.int'];
-    
+
     if (!formData.email) {
       errors.email = 'Email is required';
     } else if (!emailRegex.test(formData.email)) {
       errors.email = 'Please enter a valid email address';
-    } else if (!allowedDomains.some(domain => formData.email.toLowerCase().endsWith(domain))) {
+    } else if (!allowedDomains.some(domain => formData.email && formData.email.toLowerCase().endsWith(domain))) {
       errors.email = 'Email must be from @icpac.net or @igad.int domain';
     }
 
@@ -1960,13 +2348,13 @@ const UserSignupModal = ({ onSignup, onCancel, onSwitchToLogin }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     const errors = validateForm();
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
       return;
     }
-    
+
     setValidationErrors({});
     onSignup(formData);
   };
@@ -2004,7 +2392,7 @@ const UserSignupModal = ({ onSignup, onCancel, onSwitchToLogin }) => {
     <div className="auth-modal-overlay">
       <div className="auth-modal-container">
         <button onClick={onCancel} className="auth-close-btn">×</button>
-        
+
         <div className="auth-split-layout">
           {/* Branding Sidebar */}
           <div className="auth-branding-sidebar">
@@ -2089,9 +2477,9 @@ const UserSignupModal = ({ onSignup, onCancel, onSwitchToLogin }) => {
                 {formData.password && (
                   <div className="password-strength">
                     <div className="strength-bar">
-                      <div 
+                      <div
                         className="strength-fill"
-                        style={{ 
+                        style={{
                           width: `${(passwordStrength.score / 6) * 100}%`,
                           backgroundColor: passwordStrength.color
                         }}
@@ -2154,32 +2542,32 @@ const ForgotPasswordModal = ({ onCancel, onBackToLogin }) => {
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const allowedDomains = ['@icpac.net', '@igad.int'];
-    
+
     // Check basic email format first
     if (!emailRegex.test(email)) {
       return false;
     }
-    
+
     // Check if email ends with allowed domains
-    return allowedDomains.some(domain => email.toLowerCase().endsWith(domain));
+    return email && allowedDomains.some(domain => email.toLowerCase().endsWith(domain));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!email) {
       setValidationError('Email is required');
       return;
     }
-    
+
     if (!validateEmail(email)) {
       setValidationError('Email must be from @icpac.net or @igad.int domain');
       return;
     }
-    
+
     setValidationError('');
     setIsLoading(true);
-    
+
     // Simulate API call
     setTimeout(() => {
       setIsLoading(false);
@@ -2198,14 +2586,14 @@ const ForgotPasswordModal = ({ onCancel, onBackToLogin }) => {
     <div className="auth-modal-overlay">
       <div className="auth-modal-container">
         <button onClick={onCancel} className="auth-close-btn">×</button>
-        
+
         <div className="auth-split-layout">
           {/* Branding Sidebar */}
           <div className="auth-branding-sidebar">
             <div className="branding-logo">🔐</div>
             <h2 className="branding-title">Reset Password</h2>
             <p className="branding-subtitle">
-              {isSubmitted 
+              {isSubmitted
                 ? "Check your email for reset instructions"
                 : "Enter your email to receive password reset instructions"
               }
@@ -2233,7 +2621,7 @@ const ForgotPasswordModal = ({ onCancel, onBackToLogin }) => {
                 {isSubmitted ? "Email Sent!" : "Forgot Password"}
               </h3>
               <p className="auth-form-subtitle">
-                {isSubmitted 
+                {isSubmitted
                   ? "We've sent password reset instructions to your email address"
                   : "Enter your email address and we'll send you instructions to reset your password"
                 }
@@ -2313,8 +2701,8 @@ const LandingPage = ({ onLogin, onSignup, onViewDashboard }) => {
               <img src="/ICPAC_Website_Header_Logo.svg" alt="ICPAC Logo" className="icpac-logo" />
             </div>
             <div className="title-section">
-              <h1 className="booking-title">ICPAC MEETING BOOKING SYSTEM</h1>
-              <p className="booking-subtitle">Welcome to the ICPAC Meeting Room Booking System</p>
+              <h1 className="booking-title">ICPAC INTERNAL BOOKING SYSTEM</h1>
+              <p className="booking-subtitle">Welcome to the ICPAC Internal Booking System - Streamline your conference room reservations, manage meeting schedules, and enhance team collaboration</p>
             </div>
           </div>
         </div>
@@ -2325,14 +2713,14 @@ const LandingPage = ({ onLogin, onSignup, onViewDashboard }) => {
             <h2 className="date-title">Welcome to ICPAC Booking System</h2>
             <div className="admin-controls">
               <div className="auth-buttons">
-                <button 
+                <button
                   onClick={onLogin}
                   className="admin-login-btn"
                   title="Login to your account"
                 >
                   Login
                 </button>
-                <button 
+                <button
                   onClick={onSignup}
                   className="user-management-btn"
                   title="Create new account"
@@ -2356,7 +2744,7 @@ const LandingPage = ({ onLogin, onSignup, onViewDashboard }) => {
           <div className="date-header">
             <h2 className="date-title">Room Analytics & Insights</h2>
             <div className="admin-controls">
-              <button 
+              <button
                 onClick={onViewDashboard}
                 className="admin-login-btn"
                 title="View detailed analytics dashboard"
@@ -2365,105 +2753,105 @@ const LandingPage = ({ onLogin, onSignup, onViewDashboard }) => {
               </button>
             </div>
           </div>
-          
-          <div className="dashboard-preview" style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
-            gap: '20px', 
+
+          <div className="dashboard-preview" style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: '20px',
             padding: '20px',
             backgroundColor: '#f8fafc',
             borderRadius: '12px',
             marginTop: '20px',
             boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)'
           }}>
-            <div className="stat-card" style={{ 
-              background: 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)', 
-              padding: '20px', 
+            <div className="stat-card" style={{
+              background: 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)',
+              padding: '20px',
               borderRadius: '12px',
               textAlign: 'center',
               border: '1px solid rgba(56, 189, 248, 0.2)',
               boxShadow: '0 2px 4px rgba(56, 189, 248, 0.1)',
               transition: 'transform 0.2s ease, box-shadow 0.2s ease'
             }}
-            onMouseEnter={(e) => {
-              e.target.style.transform = 'translateY(-2px)';
-              e.target.style.boxShadow = '0 4px 12px rgba(56, 189, 248, 0.2)';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.transform = 'translateY(0)';
-              e.target.style.boxShadow = '0 2px 4px rgba(56, 189, 248, 0.1)';
-            }}>
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 4px 12px rgba(56, 189, 248, 0.2)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 2px 4px rgba(56, 189, 248, 0.1)';
+              }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🏢</div>
               <h3 style={{ color: '#0369a1', margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600' }}>Total Rooms</h3>
               <p style={{ fontSize: '28px', fontWeight: 'bold', color: '#0c4a6e', margin: '0' }}>6</p>
             </div>
-            <div className="stat-card" style={{ 
-              background: 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)', 
-              padding: '20px', 
+            <div className="stat-card" style={{
+              background: 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)',
+              padding: '20px',
               borderRadius: '12px',
               textAlign: 'center',
               border: '1px solid rgba(34, 197, 94, 0.2)',
               boxShadow: '0 2px 4px rgba(34, 197, 94, 0.1)',
               transition: 'transform 0.2s ease, box-shadow 0.2s ease'
             }}
-            onMouseEnter={(e) => {
-              e.target.style.transform = 'translateY(-2px)';
-              e.target.style.boxShadow = '0 4px 12px rgba(34, 197, 94, 0.2)';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.transform = 'translateY(0)';
-              e.target.style.boxShadow = '0 2px 4px rgba(34, 197, 94, 0.1)';
-            }}>
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 4px 12px rgba(34, 197, 94, 0.2)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 2px 4px rgba(34, 197, 94, 0.1)';
+              }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>📊</div>
               <h3 style={{ color: '#166534', margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600' }}>Available Features</h3>
               <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#14532d', margin: '0' }}>Live Analytics</p>
             </div>
-            <div className="stat-card" style={{ 
-              background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)', 
-              padding: '20px', 
+            <div className="stat-card" style={{
+              background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+              padding: '20px',
               borderRadius: '12px',
               textAlign: 'center',
               border: '1px solid rgba(245, 158, 11, 0.2)',
               boxShadow: '0 2px 4px rgba(245, 158, 11, 0.1)',
               transition: 'transform 0.2s ease, box-shadow 0.2s ease'
             }}
-            onMouseEnter={(e) => {
-              e.target.style.transform = 'translateY(-2px)';
-              e.target.style.boxShadow = '0 4px 12px rgba(245, 158, 11, 0.2)';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.transform = 'translateY(0)';
-              e.target.style.boxShadow = '0 2px 4px rgba(245, 158, 11, 0.1)';
-            }}>
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 4px 12px rgba(245, 158, 11, 0.2)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 2px 4px rgba(245, 158, 11, 0.1)';
+              }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🎯</div>
               <h3 style={{ color: '#d97706', margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600' }}>Room Types</h3>
               <p style={{ fontSize: '28px', fontWeight: 'bold', color: '#92400e', margin: '0' }}>3</p>
             </div>
-            <div className="stat-card" style={{ 
-              background: 'linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)', 
-              padding: '20px', 
+            <div className="stat-card" style={{
+              background: 'linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)',
+              padding: '20px',
               borderRadius: '12px',
               textAlign: 'center',
               border: '1px solid rgba(139, 92, 246, 0.2)',
               boxShadow: '0 2px 4px rgba(139, 92, 246, 0.1)',
               transition: 'transform 0.2s ease, box-shadow 0.2s ease'
             }}
-            onMouseEnter={(e) => {
-              e.target.style.transform = 'translateY(-2px)';
-              e.target.style.boxShadow = '0 4px 12px rgba(139, 92, 246, 0.2)';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.transform = 'translateY(0)';
-              e.target.style.boxShadow = '0 2px 4px rgba(139, 92, 246, 0.1)';
-            }}>
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 4px 12px rgba(139, 92, 246, 0.2)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 2px 4px rgba(139, 92, 246, 0.1)';
+              }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>⚡</div>
               <h3 style={{ color: '#7c3aed', margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600' }}>Real-time</h3>
               <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#5b21b6', margin: '0' }}>Updates</p>
             </div>
           </div>
-          
-          <div className="dashboard-features" style={{ 
-            marginTop: '20px', 
+
+          <div className="dashboard-features" style={{
+            marginTop: '20px',
             padding: '20px',
             backgroundColor: '#f8fafc',
             borderRadius: '8px'
@@ -2591,10 +2979,10 @@ const AdminLoginModal = ({ onLogin, onCancel }) => {
   );
 };
 
-const EditBookingForm = ({ booking, rooms, onUpdate, onCancel }) => {
+const EditBookingForm = ({ booking, rooms, currentUser, onUpdate, onCancel }) => {
   const [formData, setFormData] = useState({
     title: booking.title || '',
-    organizer: booking.organizer || '',
+    organizer: booking.organizer || (currentUser ? currentUser.name : ''),
     duration: booking.duration || 1,
     description: booking.description || '',
     date: booking.date || '',
@@ -2770,25 +3158,25 @@ const EditBookingForm = ({ booking, rooms, onUpdate, onCancel }) => {
   );
 };
 
-const UserRegistrationModal = ({ rooms, onRegister, onCancel }) => {
+const UserRegistrationModal = ({ rooms, onRegister, onCancel, user = null, isEditing = false }) => {
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    role: 'user',
-    managedRooms: []
+    name: user?.name || '',
+    email: user?.email || '',
+    password: user?.password || '',
+    role: user?.role || 'user',
+    managedRooms: user?.managedRooms || []
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     // Validate email domain
     const allowedDomains = ['@icpac.net', '@igad.int'];
-    if (!allowedDomains.some(domain => formData.email.toLowerCase().endsWith(domain))) {
+    if (!allowedDomains.some(domain => formData.email && formData.email.toLowerCase().endsWith(domain))) {
       alert('Email must be from @icpac.net or @igad.int domain');
       return;
     }
-    
+
     onRegister(formData);
   };
 
@@ -2815,7 +3203,7 @@ const UserRegistrationModal = ({ rooms, onRegister, onCancel }) => {
     <div className="modal-overlay">
       <div className="modal-content">
         <div className="modal-header">
-          <h3 className="modal-title">User Registration</h3>
+          <h3 className="modal-title">{isEditing ? 'Edit User' : 'User Registration'}</h3>
           <button onClick={onCancel} className="modal-close">×</button>
         </div>
         <form onSubmit={handleSubmit} className="user-registration-form">
@@ -2907,11 +3295,11 @@ const UserRegistrationModal = ({ rooms, onRegister, onCancel }) => {
 
 const UserManagementModal = ({ users, rooms, onUpdateUsers, onCancel }) => {
   const [showAddUser, setShowAddUser] = useState(false);
-
+  const [editingUser, setEditingUser] = useState(null);
 
   const handleAddUser = (userData) => {
     // Check if email already exists
-    const emailExists = users.some(user => user.email.toLowerCase() === userData.email.toLowerCase());
+    const emailExists = users.some(user => user.email && userData.email && user.email.toLowerCase() === userData.email.toLowerCase());
     if (emailExists) {
       alert('Error: A user with this email address already exists. Please use a different email.');
       return;
@@ -2927,6 +3315,39 @@ const UserManagementModal = ({ users, rooms, onUpdateUsers, onCancel }) => {
     localStorage.setItem('icpac_users', JSON.stringify(updatedUsers));
     setShowAddUser(false);
     alert('User added successfully!');
+  };
+
+  const handleDeleteUser = (userId) => {
+    const userToDelete = users.find(user => user.id === userId);
+    if (userToDelete) {
+      if (window.confirm(`⚠️ Are you sure you want to delete user "${userToDelete.name}" (${userToDelete.email})?\n\nThis action cannot be undone and will remove all their access to the system.`)) {
+        const updatedUsers = users.filter(user => user.id !== userId);
+        onUpdateUsers(updatedUsers);
+        localStorage.setItem('icpac_users', JSON.stringify(updatedUsers));
+        alert(`User "${userToDelete.name}" has been deleted successfully.`);
+      }
+    }
+  };
+
+  const handleEditUser = (userData) => {
+    // Check if email already exists (excluding current user)
+    const emailExists = users.some(user => 
+      user.id !== editingUser.id && user.email && userData.email && user.email.toLowerCase() === userData.email.toLowerCase()
+    );
+    if (emailExists) {
+      alert('Error: A user with this email address already exists. Please use a different email.');
+      return;
+    }
+
+    const updatedUsers = users.map(user =>
+      user.id === editingUser.id
+        ? { ...user, ...userData, updatedAt: new Date().toISOString() }
+        : user
+    );
+    onUpdateUsers(updatedUsers);
+    localStorage.setItem('icpac_users', JSON.stringify(updatedUsers));
+    setEditingUser(null);
+    alert('User updated successfully!');
   };
 
   const getRoomNames = (roomIds) => {
@@ -2976,7 +3397,22 @@ const UserManagementModal = ({ users, rooms, onUpdateUsers, onCancel }) => {
                     </td>
                     <td>{user.managedRooms ? getRoomNames(user.managedRooms) : 'None'}</td>
                     <td>
-                      <span style={{ color: '#6b7280', fontStyle: 'italic' }}>No actions</span>
+                      <div className="user-actions">
+                        <button
+                          onClick={() => setEditingUser(user)}
+                          className="edit-user-btn"
+                          title="Edit user"
+                        >
+                          ✏️ Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(user.id)}
+                          className="delete-user-btn"
+                          title="Delete user"
+                        >
+                          🗑️ Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -2997,6 +3433,17 @@ const UserManagementModal = ({ users, rooms, onUpdateUsers, onCancel }) => {
             rooms={rooms}
             onRegister={handleAddUser}
             onCancel={() => setShowAddUser(false)}
+          />
+        )}
+
+        {/* Edit User Modal */}
+        {editingUser && (
+          <UserRegistrationModal
+            rooms={rooms}
+            user={editingUser}
+            onRegister={handleEditUser}
+            onCancel={() => setEditingUser(null)}
+            isEditing={true}
           />
         )}
       </div>
@@ -3371,7 +3818,7 @@ const ProcurementDashboard = ({ bookings, rooms, onClose }) => {
                           <td>{formatDate(order.date || order.startDate)}</td>
                           <td>{formatTime(order.time || order.startTime)}</td>
                           <td>
-                            <span className={`duration-badge ${order.duration.toLowerCase().replace(' ', '-')}`}>
+                            <span className={`duration-badge ${order.duration ? order.duration.toLowerCase().replace(' ', '-') : ''}`}>
                               {order.duration}
                             </span>
                             {order.totalDays > 1 && (
@@ -3418,6 +3865,90 @@ const ProcurementDashboard = ({ bookings, rooms, onClose }) => {
             </div>
           )}
         </div>
+      </div>
+    </div>
+  );
+};
+
+const MeetingSpaceSelectionModal = ({ rooms, onSelect, currentUser }) => {
+  const [selectedRoomId, setSelectedRoomId] = useState('');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (selectedRoomId) {
+      onSelect(selectedRoomId);
+    } else {
+      alert('Please select a meeting space to continue.');
+    }
+  };
+
+  const getLocationFromName = (name) => {
+    if (name.toLowerCase().includes('ground floor')) return 'Ground Floor';
+    if (name.toLowerCase().includes('first floor')) return 'First Floor';  
+    if (name.toLowerCase().includes('1st floor')) return '1st Floor';
+    if (name.toLowerCase().includes('underground')) return 'Underground';
+    return 'Main Building';
+  };
+
+  return (
+    <div className="modal-overlay meeting-space-modal-overlay">
+      <div className="modal-content meeting-space-modal">
+        <div className="modal-header">
+          <h3 className="modal-title">Select Your Meeting Space</h3>
+          <div className="modal-subtitle">
+            Welcome, {currentUser?.name}! Please choose a meeting space to continue.
+          </div>
+        </div>
+        <form onSubmit={handleSubmit} className="meeting-space-form">
+          <div className="form-group">
+            <label className="form-label">Available Meeting Spaces</label>
+            <div className="meeting-spaces-grid">
+              {rooms.map(room => (
+                <div 
+                  key={room.id} 
+                  className={`meeting-space-card ${selectedRoomId === room.id.toString() ? 'selected' : ''}`}
+                  onClick={() => setSelectedRoomId(room.id.toString())}
+                >
+                  <div className="space-header">
+                    <h4 className="space-name">{room.name}</h4>
+                    <span className="space-location">{getLocationFromName(room.name)}</span>
+                  </div>
+                  <div className="space-details">
+                    <div className="space-capacity">
+                      <span className="capacity-icon">👥</span>
+                      <span>Capacity: {room.capacity}</span>
+                    </div>
+                    <div className="space-amenities">
+                      {room.amenities?.slice(0, 3).map(amenity => (
+                        <span key={amenity} className="amenity-chip-small">
+                          {amenity}
+                        </span>
+                      ))}
+                      {room.amenities?.length > 3 && (
+                        <span className="amenity-more">+{room.amenities.length - 3} more</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="selection-indicator">
+                    {selectedRoomId === room.id.toString() && <span className="checkmark">✓</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="form-buttons">
+            <button 
+              type="submit" 
+              className="form-button primary large"
+              disabled={!selectedRoomId}
+            >
+              Continue to Dashboard
+            </button>
+          </div>
+          <div className="modal-footer-note">
+            You can only book and view the meeting space you select here.
+          </div>
+        </form>
       </div>
     </div>
   );

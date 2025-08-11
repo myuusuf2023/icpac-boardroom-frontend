@@ -1,0 +1,56 @@
+# Multi-stage build for Django backend
+FROM python:3.11-slim AS base
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    postgresql-client \
+    libpq-dev \
+    gettext \
+    curl \
+    libffi-dev \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app user
+RUN groupadd --gid 1000 app && \
+    useradd --uid 1000 --gid app --shell /bin/bash --create-home app
+
+# Set work directory
+WORKDIR /app
+
+# Upgrade pip and install Python dependencies
+COPY icpac-booking-backend/requirements.txt .
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy project files
+COPY icpac-booking-backend/ .
+
+# Create necessary directories and set permissions
+RUN mkdir -p logs media staticfiles celerybeat-schedule && \
+    chown -R app:app /app
+
+# Switch to app user
+USER app
+
+# Collect static files (will be overridden by volume in production)
+RUN python manage.py collectstatic --noinput --clear
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:8000/api/auth/ || exit 1
+
+# Default command - can be overridden in docker-compose
+CMD ["gunicorn", "icpac_booking.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "4", "--timeout", "120", "--keep-alive", "5", "--max-requests", "1000", "--preload"]
