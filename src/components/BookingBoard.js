@@ -59,8 +59,6 @@ const BookingBoard = () => {
   const [selectedRoomId, setSelectedRoomId] = useState('');
   const [selectedMeetingSpace, setSelectedMeetingSpace] = useState(null);
   const [showMeetingSpaceModal, setShowMeetingSpaceModal] = useState(false);
-  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
 
   // localStorage functions
   const saveBookingsToStorage = (bookingsData) => {
@@ -157,9 +155,9 @@ const BookingBoard = () => {
       return true;
     }
 
-    // For today, show bookings only if it's before 16:00 (4 PM)
+    // For today, show bookings only if it's before 18:00 (6 PM)
     const currentHour = now.getHours();
-    return currentHour < 16;
+    return currentHour < 18;
   };
 
   const handleAdminLogin = (password) => {
@@ -339,17 +337,17 @@ const BookingBoard = () => {
       const visibleRooms = getVisibleRooms();
       console.log('getFilteredRooms - selectedRoomId:', selectedRoomId);
       console.log('getFilteredRooms - visibleRooms:', visibleRooms);
-      
+
       // If no room is selected or "all" is selected, show all rooms
       if (!selectedRoomId || selectedRoomId === '' || selectedRoomId === 'all') {
         return visibleRooms;
       }
-      
+
       // Filter to show only the selected room
       const filteredRooms = visibleRooms.filter(room => {
         return room && room.id && room.id.toString() === selectedRoomId.toString();
       });
-      
+
       console.log('Filtered rooms:', filteredRooms);
       return filteredRooms;
     } catch (error) {
@@ -417,26 +415,27 @@ const BookingBoard = () => {
     if (currentUser.role === 'room_admin') {
       return currentUser.managedRooms && currentUser.managedRooms.includes(booking.roomId);
     }
-    return booking.organizer === currentUser.email; // Users can manage their own bookings
+    // Users can manage their own bookings regardless of approval status
+    return booking.organizer === currentUser.email;
   };
 
   const cancelBooking = async (bookingId) => {
     const bookingToCancel = bookings.find(booking => booking.id === bookingId);
     const roomToCancel = rooms.find(room => room.id === bookingToCancel?.roomId);
-    
+
     if (window.confirm('Are you sure you want to cancel this booking?')) {
       const updatedBookings = bookings.filter(booking => booking.id !== bookingId);
       setBookings(updatedBookings);
       saveBookingsToStorage(updatedBookings);
-      
+
       // 📧 Send cancellation notification
       try {
         if (currentUser && bookingToCancel && roomToCancel) {
           const cancellationReason = prompt('Reason for cancellation (optional):') || 'No reason provided';
           await emailService.sendCancellationNotification(
-            bookingToCancel, 
-            roomToCancel, 
-            currentUser, 
+            bookingToCancel,
+            roomToCancel,
+            currentUser,
             cancellationReason
           );
         }
@@ -630,11 +629,79 @@ const BookingBoard = () => {
     } else {
       // Default bookings if none saved
       const defaultBookings = [
-        { id: 1, roomId: 1, date: '2025-01-08', time: '09:00', duration: 2, title: 'ICPAC Staff Meeting', organizer: 'Dr. Guleid Artan' },
-        { id: 2, roomId: 2, date: '2025-01-08', time: '14:00', duration: 1, title: 'Climate Advisory Meeting', organizer: 'ICPAC Team' },
-        { id: 3, roomId: 4, date: '2025-01-08', time: '10:00', duration: 3, title: 'Emergency Response Planning', organizer: 'Disaster Risk Management' },
-        { id: 4, roomId: 5, date: '2025-01-08', time: '08:00', duration: 2, title: 'GIS Training Workshop', organizer: 'IT Department' },
-        { id: 5, roomId: 6, date: '2025-01-08', time: '15:00', duration: 2, title: 'Climate Data Analysis Training', organizer: 'Research Team' },
+        {
+          id: 1,
+          roomId: 1,
+          date: '2025-01-08',
+          time: '09:00',
+          duration: 'Multi-day',
+          startDate: '2025-01-08',
+          endDate: '2025-01-10',
+          title: 'ICPAC Annual Conference',
+          organizer: 'Dr. Abdi fitar',
+          attendeeCount: 150,
+          procurementOrders: [
+            { itemName: 'Coffee & Tea', quantity: 50, notes: 'For morning breaks' },
+            { itemName: 'Water Bottles', quantity: 200, notes: 'Throughout the event' },
+            { itemName: 'Lunch Catering', quantity: 150, notes: 'All three days' }
+          ]
+        },
+        {
+          id: 2,
+          roomId: 2,
+          date: '2025-01-08',
+          time: '14:00',
+          duration: 'Hourly',
+          title: 'Climate Advisory Meeting',
+          organizer: 'ICPAC Team',
+          attendeeCount: 12,
+          procurementOrders: [
+            { itemName: 'Coffee & Tea', quantity: 12, notes: 'Afternoon session' },
+            { itemName: 'Meeting Stationery', quantity: 12, notes: 'Notebooks and pens' }
+          ]
+        },
+        {
+          id: 3,
+          roomId: 4,
+          date: '2025-01-07',
+          time: '10:00',
+          duration: 'Full day',
+          title: 'Emergency Response Planning',
+          organizer: 'Disaster Risk Management',
+          attendeeCount: 8,
+          procurementOrders: [
+            { itemName: 'Lunch Catering', quantity: 8, notes: 'Working lunch' },
+            { itemName: 'Coffee & Tea', quantity: 8, notes: 'All day refreshments' }
+          ]
+        },
+        {
+          id: 4,
+          roomId: 5,
+          date: new Date().toISOString().split('T')[0], // Today's date
+          time: '08:00',
+          duration: 'Hourly',
+          title: 'GIS Training Workshop',
+          organizer: 'IT Department',
+          attendeeCount: 15,
+          procurementOrders: [
+            { itemName: 'Coffee & Tea', quantity: 15, notes: 'Morning session' },
+            { itemName: 'Training Materials', quantity: 15, notes: 'Printed handouts' }
+          ]
+        },
+        {
+          id: 5,
+          roomId: 6,
+          date: '2025-01-08',
+          time: '15:00',
+          duration: 'Full day',
+          title: 'Climate Data Analysis Training',
+          organizer: 'Research Team',
+          attendeeCount: 18,
+          procurementOrders: [
+            { itemName: 'Lunch Catering', quantity: 18, notes: 'Working lunch included' },
+            { itemName: 'Coffee & Tea', quantity: 18, notes: 'All day refreshments' }
+          ]
+        },
       ];
       setBookings(defaultBookings);
       saveBookingsToStorage(defaultBookings);
@@ -643,7 +710,7 @@ const BookingBoard = () => {
 
   const timeSlots = [
     '08:00', '09:00', '10:00', '11:00', '12:00', '13:00',
-    '14:00', '15:00', '16:00'
+    '14:00', '15:00', '16:00', '17:00', '18:00'
   ];
 
   // Apply dark mode on initial load
@@ -651,45 +718,6 @@ const BookingBoard = () => {
     document.body.classList.toggle('dark-mode', isDarkMode);
   }, [isDarkMode]);
 
-  // PWA install prompt handling
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setShowInstallPrompt(true);
-    };
-
-    const handleAppInstalled = () => {
-      console.log('PWA installed successfully');
-      setShowInstallPrompt(false);
-      setDeferredPrompt(null);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    window.addEventListener('appinstalled', handleAppInstalled);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', handleAppInstalled);
-    };
-  }, []);
-
-  // Install PWA function
-  const installPWA = async () => {
-    if (!deferredPrompt) return;
-    
-    deferredPrompt.prompt();
-    const choiceResult = await deferredPrompt.userChoice;
-    
-    if (choiceResult.outcome === 'accepted') {
-      console.log('User accepted PWA install');
-    } else {
-      console.log('User dismissed PWA install');
-    }
-    
-    setDeferredPrompt(null);
-    setShowInstallPrompt(false);
-  };
 
   const formatDate = (date) => {
     return date.toISOString().split('T')[0];
@@ -701,7 +729,7 @@ const BookingBoard = () => {
 
   const isWeekend = (date) => {
     const dayOfWeek = new Date(date).getDay();
-    return dayOfWeek === 0 || dayOfWeek === 6; // Sunday = 0, Saturday = 6
+    return dayOfWeek === 0; // Only Sunday = 0 is blocked, Saturday (6) is now allowed
   };
 
   const isTimeSlotInPast = (date, time) => {
@@ -850,9 +878,9 @@ const BookingBoard = () => {
   };
 
   const handleBooking = (room, time) => {
-    // Check if the selected date is a weekend
+    // Check if the selected date is Sunday
     if (isWeekend(selectedDate)) {
-      alert('Cannot book on weekends (Saturday and Sunday). Please select a weekday.');
+      alert('Cannot book on Sunday. Please select Monday through Saturday.');
       return;
     }
 
@@ -918,13 +946,13 @@ const BookingBoard = () => {
       if (currentUser) {
         // 1. Send booking confirmation to the user
         await emailService.sendBookingConfirmation(newBooking, selectedRoom, currentUser);
-        
+
         // 2. Send admin notifications for new booking
         const roomAdmins = emailService.getRoomAdmins(selectedRoom.id, users);
         if (roomAdmins.length > 0) {
           await emailService.sendAdminNotification(newBooking, selectedRoom, currentUser, roomAdmins);
         }
-        
+
         // 3. Schedule 30-minute meeting reminder
         const reminderResult = emailService.scheduleReminder(newBooking, selectedRoom, currentUser);
         if (reminderResult.success) {
@@ -1023,7 +1051,7 @@ const BookingBoard = () => {
         <div className="date-section">
           <div className="date-header">
             <h2 className="date-title">Select Date</h2>
-            
+
             <div className="admin-controls">
               {currentUser ? (
                 <div className="user-panel">
@@ -1070,15 +1098,6 @@ const BookingBoard = () => {
                   >
                     {isDarkMode ? '☀️' : '🌙'} {isDarkMode ? 'Light' : 'Dark'} Mode
                   </button>
-                  {showInstallPrompt && (
-                    <button
-                      onClick={installPWA}
-                      className="install-pwa-btn"
-                      title="Install app on your device"
-                    >
-                      📱 Install App
-                    </button>
-                  )}
                   <button
                     onClick={handleUserLogout}
                     className="admin-logout-btn"
@@ -1100,29 +1119,29 @@ const BookingBoard = () => {
               onChange={(e) => setSelectedDate(new Date(e.target.value))}
               className="date-picker-input"
             />
-            
+
             {/* Meeting Space Dropdown - positioned below and to the right */}
             <div style={{ marginTop: '12px', marginLeft: '40px' }}>
               <div className="room-selector-container" style={{
-                background: 'linear-gradient(135deg, #f0fdf4, #e6fffa)', 
-                padding: '8px 12px', 
-                border: '1px solid #10b981', 
-                borderRadius: '25px', 
+                background: 'linear-gradient(135deg, #f0fdf4, #e6fffa)',
+                padding: '8px 12px',
+                border: '1px solid #10b981',
+                borderRadius: '25px',
                 display: 'inline-block',
                 minWidth: '280px',
                 transition: 'all 0.3s ease',
                 cursor: 'pointer'
               }}
-              onMouseEnter={(e) => {
-                e.target.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-                e.target.style.transform = 'translateY(-1px)';
-                e.target.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.2)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.background = 'linear-gradient(135deg, #f0fdf4, #e6fffa)';
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = 'none';
-              }}>
+                onMouseEnter={(e) => {
+                  e.target.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                  e.target.style.transform = 'translateY(-1px)';
+                  e.target.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.2)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = 'linear-gradient(135deg, #f0fdf4, #e6fffa)';
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = 'none';
+                }}>
                 <select
                   id="room-selector"
                   className="room-selector"
@@ -1139,8 +1158,8 @@ const BookingBoard = () => {
                     }
                   }}
                   style={{
-                    fontSize: '14px', 
-                    padding: '6px 12px', 
+                    fontSize: '14px',
+                    padding: '6px 12px',
                     width: '100%',
                     border: 'none',
                     background: 'transparent',
@@ -1291,14 +1310,12 @@ const BookingBoard = () => {
                               <td key={time}>
                                 {isWeekendDay ? (
                                   <div className="time-slot weekend-blocked">
-                                    <div className="slot-title">Weekend</div>
+                                    <div className="slot-title">Sunday</div>
                                     <div className="slot-subtitle">Not Available</div>
                                   </div>
-                                ) : isBooked && isPast ? (
-                                  <div className="time-slot past">
-                                    <div className="slot-title">Past</div>
-                                    <div className="slot-subtitle">{booking.title}</div>
-                                  </div>
+                                ) : isPast ? (
+                                  // Don't show anything for past time slots - hide completely
+                                  null
                                 ) : isBooked ? (
                                   <div className={`modern-time-slot booked ${booking.bookingType || 'hourly'} ${booking.approvalStatus || 'pending'}`}>
                                     <div className="slot-icon">
@@ -1370,17 +1387,6 @@ const BookingBoard = () => {
                                       </div>
                                     )}
                                   </div>
-                                ) : isPast ? (
-                                  <div className="modern-time-slot past">
-                                    <div className="slot-icon">🕐</div>
-                                    <div className="slot-content">
-                                      <div className="slot-title">Past</div>
-                                      <div className="slot-subtitle">Cannot book</div>
-                                    </div>
-                                    <div className="slot-status past-status">
-                                      <span className="status-indicator">❌</span>
-                                    </div>
-                                  </div>
                                 ) : (
                                   <button
                                     onClick={() => handleBooking(room, time)}
@@ -1432,7 +1438,7 @@ const BookingBoard = () => {
                     return (
                       <>
                         <h3>Day Complete</h3>
-                        <p>Booking for today is no longer available (after 4:00 PM).</p>
+                        <p>Booking for today is no longer available (after 6:00 PM).</p>
                         <p>Please select a future date to make new bookings.</p>
                       </>
                     );
@@ -1679,33 +1685,33 @@ const ProcurementOrdersSection = ({ orders, attendeeCount, onOrdersChange }) => 
 const BookingForm = ({ room, time, date, currentUser, onConfirm, onCancel }) => {
   const timeSlots = [
     '08:00', '09:00', '10:00', '11:00', '12:00', '13:00',
-    '14:00', '15:00', '16:00'
+    '14:00', '15:00', '16:00', '17:00', '18:00'
   ];
 
   // Get current time for today, or use selected time slot
   const getCurrentTimeSlot = () => {
     if (time) return time; // Always use time from clicked slot when available
-    
+
     const now = new Date();
     const selectedDate = new Date(date);
-    
+
     // Only use current time logic if booking for today
     const isToday = selectedDate.toDateString() === now.toDateString();
-    
+
     if (!isToday) {
       // For future dates, user must click on a specific time slot
       return timeSlots[0]; // Fallback only
     }
-    
+
     const currentHour = now.getHours();
     const currentMinutes = now.getMinutes();
-    
+
     // If it's past the minute mark, go to next hour
     const targetHour = currentMinutes > 0 ? currentHour + 1 : currentHour;
-    
+
     // Format as HH:00 and find closest available slot
     const timeString = `${targetHour.toString().padStart(2, '0')}:00`;
-    
+
     // Find the closest available time slot for today
     const availableSlot = timeSlots.find(slot => slot >= timeString);
     return availableSlot || timeSlots[0];
@@ -1715,7 +1721,7 @@ const BookingForm = ({ room, time, date, currentUser, onConfirm, onCancel }) => 
   const calculateEndTime = (startTime, duration) => {
     const startIndex = timeSlots.findIndex(slot => slot === startTime);
     if (startIndex === -1) return timeSlots[1];
-    
+
     const endIndex = Math.min(startIndex + duration, timeSlots.length - 1);
     return timeSlots[endIndex];
   };
@@ -1780,21 +1786,21 @@ const BookingForm = ({ room, time, date, currentUser, onConfirm, onCancel }) => 
           case 'full-day':
             newData.endDate = prev.startDate;
             newData.startTime = '08:00';
-            newData.endTime = '16:00';
+            newData.endTime = '18:00';
             break;
           case 'weekly':
             const endDate = new Date(startDate);
             endDate.setDate(startDate.getDate() + 6);
             newData.endDate = endDate.toISOString().split('T')[0];
             newData.startTime = '08:00';
-            newData.endTime = '16:00';
+            newData.endTime = '18:00';
             break;
           case 'multi-day':
             const multiEndDate = new Date(startDate);
             multiEndDate.setDate(startDate.getDate() + 1);
             newData.endDate = multiEndDate.toISOString().split('T')[0];
             newData.startTime = '08:00';
-            newData.endTime = '16:00';
+            newData.endTime = '18:00';
             break;
           default: // hourly
             newData.endDate = prev.startDate;
@@ -1918,7 +1924,7 @@ const BookingForm = ({ room, time, date, currentUser, onConfirm, onCancel }) => 
                   id="booking-type"
                 >
                   <option value="hourly">⏰ Hourly Booking</option>
-                  <option value="full-day">🌅 Full Day (8:00 AM - 4:00 PM)</option>
+                  <option value="full-day">🌅 Full Day (8:00 AM - 6:00 PM)</option>
                   <option value="multi-day">📅 Multi-Day Booking</option>
                   <option value="weekly">📆 Weekly Booking (7 days)</option>
                 </select>
@@ -2162,7 +2168,12 @@ const UserLoginModal = ({ onLogin, onCancel, onSwitchToSignup, onForgotPassword 
         <div className="auth-split-layout">
           {/* Branding Sidebar */}
           <div className="auth-branding-sidebar">
-            <div className="branding-logo">🏢</div>
+            <div className="branding-logo">
+              <img
+                src="/ICPAC_Website_Header_Logo.svg"
+                alt="ICPAC Logo"
+              />
+            </div>
             <h2 className="branding-title">Welcome Back!</h2>
             <p className="branding-subtitle">Sign in to access your ICPAC meeting room booking dashboard</p>
             <div className="branding-features">
@@ -2396,7 +2407,12 @@ const UserSignupModal = ({ onSignup, onCancel, onSwitchToLogin }) => {
         <div className="auth-split-layout">
           {/* Branding Sidebar */}
           <div className="auth-branding-sidebar">
-            <div className="branding-logo">🚀</div>
+            <div className="branding-logo">
+              <img
+                src="/ICPAC_Website_Header_Logo.svg"
+                alt="ICPAC Logo"
+              />
+            </div>
             <h2 className="branding-title">Join ICPAC!</h2>
             <p className="branding-subtitle">Create your account to start booking meeting rooms and accessing our services</p>
             <div className="branding-features">
@@ -2950,6 +2966,13 @@ const AdminLoginModal = ({ onLogin, onCancel }) => {
     <div className="modal-overlay">
       <div className="modal-content">
         <div className="modal-header">
+          <div className="admin-logo-section" style={{ textAlign: 'center', marginBottom: '16px' }}>
+            <img
+              src="/ICPAC_Website_Header_Logo.svg"
+              alt="ICPAC Logo"
+              style={{ width: '48px', height: '48px', objectFit: 'contain' }}
+            />
+          </div>
           <h3 className="modal-title">Admin Login</h3>
           <button onClick={onCancel} className="modal-close">×</button>
         </div>
@@ -2994,7 +3017,7 @@ const EditBookingForm = ({ booking, rooms, currentUser, onUpdate, onCancel }) =>
 
   const timeSlots = [
     '08:00', '09:00', '10:00', '11:00', '12:00', '13:00',
-    '14:00', '15:00', '16:00'
+    '14:00', '15:00', '16:00', '17:00', '18:00'
   ];
 
   const handleSubmit = (e) => {
@@ -3331,7 +3354,7 @@ const UserManagementModal = ({ users, rooms, onUpdateUsers, onCancel }) => {
 
   const handleEditUser = (userData) => {
     // Check if email already exists (excluding current user)
-    const emailExists = users.some(user => 
+    const emailExists = users.some(user =>
       user.id !== editingUser.id && user.email && userData.email && user.email.toLowerCase() === userData.email.toLowerCase()
     );
     if (emailExists) {
@@ -3451,14 +3474,22 @@ const UserManagementModal = ({ users, rooms, onUpdateUsers, onCancel }) => {
   );
 };
 
-// Procurement Dashboard Component
+// Enhanced Procurement Dashboard Component
 const ProcurementDashboard = ({ bookings, rooms, onClose }) => {
+  const [searchTerm, setSearchTerm] = React.useState('');
+  const [statusFilter, setStatusFilter] = React.useState('all');
+  const [sortBy, setSortBy] = React.useState('date');
+  const [sortOrder, setSortOrder] = React.useState('asc');
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [itemsPerPage] = React.useState(10);
+
   const getAllProcurementOrders = () => {
     return bookings
       .filter(booking => booking.procurementOrders && booking.procurementOrders.length > 0)
       .map(booking => ({
         ...booking,
         roomName: rooms.find(room => room.id === booking.roomId)?.name || 'Unknown Room',
+        roomLocation: getRoomLocation(rooms.find(room => room.id === booking.roomId)),
         // Normalize procurement orders data structure
         procurementOrders: booking.procurementOrders.map(item => ({
           ...item,
@@ -3468,9 +3499,31 @@ const ProcurementDashboard = ({ bookings, rooms, onClose }) => {
         })),
         // Add booking duration info
         duration: getBookingDuration(booking),
-        totalDays: getTotalBookingDays(booking)
+        totalDays: getTotalBookingDays(booking),
+        priority: calculateOrderPriority(booking)
       }))
       .sort((a, b) => new Date(a.date || a.startDate) - new Date(b.date || b.startDate));
+  };
+
+  const getRoomLocation = (room) => {
+    if (!room) return 'Unknown Location';
+    const name = room.name.toLowerCase();
+    if (name.includes('ground floor')) return 'Ground Floor';
+    if (name.includes('first floor') || name.includes('1st floor')) return 'First Floor';
+    if (name.includes('underground')) return 'Underground';
+    return 'Main Building';
+  };
+
+  const calculateOrderPriority = (booking) => {
+    const orderDate = new Date(booking.date || booking.startDate);
+    const now = new Date();
+    const hoursUntil = (orderDate - now) / (1000 * 60 * 60);
+
+    if (hoursUntil < 0) return 'expired';
+    if (hoursUntil <= 2) return 'urgent';
+    if (hoursUntil <= 24) return 'high';
+    if (hoursUntil <= 72) return 'medium';
+    return 'low';
   };
 
   const getBookingDuration = (booking) => {
@@ -3491,39 +3544,133 @@ const ProcurementDashboard = ({ bookings, rooms, onClose }) => {
     return 1;
   };
 
-  // Removed getTotalQuantity function - replaced with inline calculations that include multi-day multipliers
-
   const orders = getAllProcurementOrders();
 
-  // Debug: Log orders to see what's happening
-  console.log('Procurement Orders:', orders);
-  console.log('Orders length:', orders.length);
-  console.log('Sample order:', orders[0]);
+  // Enhanced filtering and searching
+  const getFilteredOrders = () => {
+    let filtered = orders;
 
-  // Calculate stats with debugging
-  const totalOrders = orders.length || 0;
-
-  // Fix total items calculation - sum up all quantities, not just count items
-  const totalItems = orders.reduce((total, order) => {
-    if (!order.procurementOrders || !Array.isArray(order.procurementOrders)) {
-      console.log(`Order ${order.id}: No procurement orders`);
-      return total;
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(order =>
+        order.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.organizer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.roomName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.procurementOrders.some(item =>
+          item.itemName.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      );
     }
 
+    // Status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(order => {
+        const status = getOrderStatus(order);
+        return status.status.toLowerCase() === statusFilter.toLowerCase();
+      });
+    }
+
+    // Sorting
+    filtered.sort((a, b) => {
+      let aVal, bVal;
+
+      switch (sortBy) {
+        case 'date':
+          aVal = new Date(a.date || a.startDate);
+          bVal = new Date(b.date || b.startDate);
+          break;
+        case 'title':
+          aVal = a.title.toLowerCase();
+          bVal = b.title.toLowerCase();
+          break;
+        case 'organizer':
+          aVal = a.organizer.toLowerCase();
+          bVal = b.organizer.toLowerCase();
+          break;
+        case 'room':
+          aVal = a.roomName.toLowerCase();
+          bVal = b.roomName.toLowerCase();
+          break;
+        case 'priority':
+          const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1, expired: 0 };
+          aVal = priorityOrder[a.priority] || 0;
+          bVal = priorityOrder[b.priority] || 0;
+          break;
+        default:
+          aVal = a.id;
+          bVal = b.id;
+      }
+
+      if (sortOrder === 'asc') {
+        return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+      } else {
+        return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
+      }
+    });
+
+    return filtered;
+  };
+
+  const filteredOrders = getFilteredOrders();
+
+  // Pagination
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedOrders = filteredOrders.slice(startIndex, startIndex + itemsPerPage);
+
+  // Calculate enhanced stats
+  const totalOrders = orders.length || 0;
+  const totalItems = orders.reduce((total, order) => {
+    if (!order.procurementOrders || !Array.isArray(order.procurementOrders)) {
+      return total;
+    }
     const orderTotal = order.procurementOrders.reduce((orderSum, item) => {
       const quantity = parseInt(item.quantity) || 0;
       const days = order.totalDays || 1;
-      const itemTotal = quantity * days;
-      console.log(`Item ${item.itemName}: ${quantity} × ${days} days = ${itemTotal}`);
-      return orderSum + itemTotal;
+      return orderSum + (quantity * days);
     }, 0);
-
-    console.log(`Order ${order.id}: ${orderTotal} total items`);
     return total + orderTotal;
   }, 0);
 
-  console.log('Total Orders:', totalOrders);
-  console.log('Total Items:', totalItems);
+  // Calculate additional stats for enhanced dashboard
+  const urgentOrders = orders.filter(order => order.priority === 'urgent').length;
+  const todayOrders = orders.filter(order => {
+    try {
+      return getOrderStatus(order).status === 'Today';
+    } catch (e) {
+      return false;
+    }
+  }).length;
+  const upcomingOrders = orders.filter(order => {
+    try {
+      return getOrderStatus(order).status === 'Upcoming';
+    } catch (e) {
+      return false;
+    }
+  }).length;
+
+  // Helper functions for styling
+  const getPriorityColor = (priority) => {
+    const colors = {
+      urgent: { bg: '#fef2f2', border: '#fecaca', color: '#dc2626' },
+      high: { bg: '#fef3c7', border: '#fde68a', color: '#d97706' },
+      medium: { bg: '#dbeafe', border: '#bfdbfe', color: '#2563eb' },
+      low: { bg: '#f0fdf4', border: '#bbf7d0', color: '#059669' },
+      expired: { bg: '#f1f5f9', border: '#cbd5e1', color: '#64748b' }
+    };
+    return colors[priority] || colors.medium;
+  };
+
+  const getStatusColor = (orderStatus) => {
+    const colors = {
+      today: { bg: '#fef3c7', border: '#fde68a', color: '#d97706' },
+      upcoming: { bg: '#dbeafe', border: '#bfdbfe', color: '#2563eb' },
+      past: { bg: '#f1f5f9', border: '#cbd5e1', color: '#64748b' },
+      declined: { bg: '#fef2f2', border: '#fecaca', color: '#dc2626' }
+    };
+    const statusKey = orderStatus.status.toLowerCase();
+    return colors[statusKey] || colors.upcoming;
+  };
 
   // Download functions
   const downloadPDF = (filterType = null) => {
@@ -3710,149 +3857,742 @@ const ProcurementDashboard = ({ bookings, rooms, onClose }) => {
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content large">
-        <div className="modal-header">
-          <h2 className="modal-title">Procurement Orders Dashboard</h2>
-          <div className="download-buttons">
-            <div className="download-section">
-              <h4>Download Orders</h4>
-              <div className="download-group">
-                <button onClick={() => downloadPDF()} className="download-btn pdf-btn" title="Download all orders as PDF">
+      <div className="modal-content large modern-procurement-modal">
+        <div className="modal-header" style={{
+          background: 'linear-gradient(135deg, #034930 0%, #065f46 100%)',
+          padding: '2rem',
+          borderRadius: '16px 16px 0 0',
+          color: 'white',
+          position: 'relative'
+        }}>
+          <div className="dashboard-title-section">
+            <div className="dashboard-title-content">
+              <h2 className="modal-title" style={{
+                fontSize: '2rem',
+                fontWeight: '800',
+                color: 'white',
+                margin: '0 0 0.5rem 0',
+                textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+              }}>📊 Procurement Orders Dashboard</h2>
+              <p style={{
+                color: '#d1fae5',
+                fontSize: '1rem',
+                margin: '0',
+                opacity: '0.9'
+              }}>Real-time procurement insights and order management for ICPAC</p>
+            </div>
+          </div>
+          <div className="download-section" style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-end',
+            gap: '0.75rem'
+          }}>
+            <div className="download-label" style={{
+              fontSize: '0.875rem',
+              color: '#d1fae5',
+              fontWeight: '600',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px'
+            }}>Download Orders</div>
+            <div className="download-buttons">
+              <div className="download-group" style={{
+                display: 'flex',
+                gap: '0.75rem',
+                flexWrap: 'wrap'
+              }}>
+                <button onClick={() => downloadPDF()} className="download-btn btn-pdf" title="Download all orders as PDF" style={{
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '12px',
+                  fontWeight: '600',
+                  fontSize: '0.875rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+                  fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+                }}>
                   📄 All Orders PDF
                 </button>
-
-                {/* Duration-specific downloads - only show if orders exist for that type */}
-                {orders.some(order => order.duration === 'Hourly') && (
-                  <button onClick={() => downloadPDF('Hourly')} className="download-btn green-btn duration-btn" title="Download hourly orders as PDF">
-                    📄 Hourly Orders
-                  </button>
-                )}
-
-                {orders.some(order => order.duration === 'Full day') && (
-                  <button onClick={() => downloadPDF('Full day')} className="download-btn blue-btn duration-btn" title="Download full day orders as PDF">
-                    📄 Full Day Orders
-                  </button>
-                )}
-
-                {orders.some(order => order.duration === 'Multi-day') && (
-                  <button onClick={() => downloadPDF('Multi-day')} className="download-btn yellow-btn duration-btn" title="Download multi-day orders as PDF">
-                    📄 Multi-day Orders
-                  </button>
-                )}
-
-                {orders.some(order => order.duration === 'Weekly') && (
-                  <button onClick={() => downloadPDF('Weekly')} className="download-btn purple-btn duration-btn" title="Download weekly orders as PDF">
-                    📄 Weekly Orders
-                  </button>
-                )}
+                <button onClick={() => downloadPDF('Hourly')} className="download-btn btn-hourly" title="Download hourly orders as PDF" style={{
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '12px',
+                  fontWeight: '600',
+                  fontSize: '0.875rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+                  fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+                }}>
+                  ⏰ Hourly Orders
+                </button>
               </div>
             </div>
           </div>
-          <button onClick={onClose} className="modal-close">×</button>
+          <button onClick={onClose} className="modal-close" aria-label="Close dashboard" style={{
+            position: 'absolute',
+            top: '1rem',
+            right: '1rem',
+            background: 'rgba(255, 255, 255, 0.1)',
+            color: 'white',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
+            borderRadius: '50%',
+            width: '48px',
+            height: '48px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '1.5rem',
+            fontWeight: '700',
+            cursor: 'pointer',
+            transition: 'all 0.3s ease',
+            backdropFilter: 'blur(10px)'
+          }}>×</button>
         </div>
 
-        <div className="procurement-dashboard">
+        <div className="procurement-dashboard" style={{
+          fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+          background: 'var(--bg-main, #f8fafc)',
+          padding: '2rem',
+          minHeight: '400px'
+        }}>
           {!orders || orders.length === 0 ? (
-            <div className="no-orders">
-              <h3>No Procurement Orders</h3>
-              <p>No bookings have procurement orders yet.</p>
+            <div className="no-orders" style={{
+              textAlign: 'center',
+              padding: '4rem',
+              background: '#ffffff',
+              borderRadius: '16px',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+              border: '1px solid #e2e8f0'
+            }}>
+              <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>📦</div>
+              <h3 style={{
+                fontSize: '1.5rem',
+                fontWeight: '700',
+                color: '#1e293b',
+                marginBottom: '1rem'
+              }}>No Procurement Orders Found</h3>
+              <p style={{
+                color: '#64748b',
+                fontSize: '1rem',
+                marginBottom: '2rem'
+              }}>No bookings have procurement orders yet. Orders will appear here when users submit procurement requests with their meeting bookings.</p>
+              <div style={{
+                background: '#f1f5f9',
+                padding: '1rem',
+                borderRadius: '8px',
+                fontSize: '0.875rem',
+                color: '#475569'
+              }}>
+                <strong>Tip:</strong> Procurement orders are automatically created when users add items to their booking requests during the meeting booking process.
+              </div>
             </div>
           ) : (
             <div className="orders-container">
-              <div className="dashboard-stats">
-                <div className="stat-card">
-                  <h4>Total Orders</h4>
-                  <span className="stat-number">{totalOrders}</span>
+              {/* Enhanced Search and Filter Controls */}
+              <div className="dashboard-controls" style={{
+                background: '#ffffff',
+                borderRadius: '16px',
+                padding: '1.5rem',
+                marginBottom: '2rem',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+                border: '1px solid #e2e8f0'
+              }}>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                  gap: '1rem',
+                  alignItems: 'end'
+                }}>
+                  {/* Search Input */}
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#374151',
+                      marginBottom: '0.5rem'
+                    }}>🔍 Search Orders</label>
+                    <input
+                      type="text"
+                      placeholder="Search by title, organizer, room, or items..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '8px',
+                        fontSize: '0.875rem',
+                        transition: 'border-color 0.2s ease',
+                        boxSizing: 'border-box'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                      onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+                    />
+                  </div>
+
+                  {/* Status Filter */}
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#374151',
+                      marginBottom: '0.5rem'
+                    }}>📋 Filter by Status</label>
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '8px',
+                        fontSize: '0.875rem',
+                        background: '#ffffff',
+                        cursor: 'pointer',
+                        boxSizing: 'border-box'
+                      }}
+                    >
+                      <option value="all">All Orders</option>
+                      <option value="today">Today</option>
+                      <option value="upcoming">Upcoming</option>
+                      <option value="past">Past</option>
+                      <option value="declined">Declined</option>
+                    </select>
+                  </div>
+
+                  {/* Sort Controls */}
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#374151',
+                      marginBottom: '0.5rem'
+                    }}>📊 Sort by</label>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        style={{
+                          flex: '1',
+                          padding: '0.75rem',
+                          border: '2px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '0.875rem',
+                          background: '#ffffff',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value="date">Date</option>
+                        <option value="title">Title</option>
+                        <option value="organizer">Organizer</option>
+                        <option value="room">Room</option>
+                        <option value="priority">Priority</option>
+                      </select>
+                      <button
+                        onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                        style={{
+                          padding: '0.75rem',
+                          border: '2px solid #e5e7eb',
+                          borderRadius: '8px',
+                          background: '#ffffff',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem'
+                        }}
+                        title={`Sort ${sortOrder === 'asc' ? 'Descending' : 'Ascending'}`}
+                      >
+                        {sortOrder === 'asc' ? '↑' : '↓'}
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div className="stat-card">
-                  <h4>Total Items Needed</h4>
-                  <span className="stat-number">{totalItems}</span>
-                  <small className="stat-description">Including multi-day quantities</small>
+
+                {/* Results Summary */}
+                <div style={{
+                  marginTop: '1rem',
+                  padding: '0.75rem',
+                  background: '#f8fafc',
+                  borderRadius: '8px',
+                  fontSize: '0.875rem',
+                  color: '#64748b'
+                }}>
+                  Showing {paginatedOrders.length} of {filteredOrders.length} orders
+                  {searchTerm && ` (filtered from ${orders.length} total)`}
                 </div>
-                <div className="stat-card">
-                  <h4>Today's Orders</h4>
-                  <span className="stat-number">
-                    {orders.filter(order => {
-                      try {
-                        return getOrderStatus(order).status === 'Today';
-                      } catch (e) {
-                        return false;
-                      }
-                    }).length}
-                  </span>
+              </div>
+              <div className="dashboard-stats" role="region" aria-label="Dashboard statistics" style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                gap: '1.5rem',
+                marginBottom: '2rem'
+              }}>
+                <div className="stat-card total-orders" role="article" aria-label={`Total orders: ${totalOrders}`} style={{
+                  background: '#ffffff',
+                  borderRadius: '16px',
+                  padding: '1.5rem',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+                  border: '1px solid #e2e8f0',
+                  borderLeft: '5px solid #3b82f6',
+                  position: 'relative',
+                  transition: 'all 0.3s ease',
+                  cursor: 'pointer'
+                }}>
+                  <div className="stat-header" style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    marginBottom: '1rem'
+                  }}>
+                    <div className="stat-label" style={{
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#64748b',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      lineHeight: '1.2'
+                    }}>Total<br />Orders</div>
+                    <div className="stat-icon" role="img" aria-label="Orders icon" style={{
+                      fontSize: '2rem',
+                      opacity: '0.7'
+                    }}>📦</div>
+                  </div>
+                  <div className="stat-value" aria-label={`${totalOrders} orders`} style={{
+                    fontSize: '2.5rem',
+                    fontWeight: '800',
+                    color: '#1e293b',
+                    margin: '0'
+                  }}>{totalOrders}</div>
                 </div>
-                <div className="stat-card declined-stat">
-                  <h4>Declined Orders</h4>
-                  <span className="stat-number declined-number">
-                    {orders.filter(order => {
-                      try {
-                        return getOrderStatus(order).status === 'Declined';
-                      } catch (e) {
-                        return false;
-                      }
-                    }).length}
-                  </span>
+                <div className="stat-card total-items" role="article" aria-label={`Total items: ${totalItems}`} style={{
+                  background: '#ffffff',
+                  borderRadius: '16px',
+                  padding: '1.5rem',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+                  border: '1px solid #e2e8f0',
+                  borderLeft: '5px solid #10b981',
+                  position: 'relative',
+                  transition: 'all 0.3s ease',
+                  cursor: 'pointer'
+                }}>
+                  <div className="stat-header" style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    marginBottom: '1rem'
+                  }}>
+                    <div className="stat-label" style={{
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#64748b',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      lineHeight: '1.2'
+                    }}>Total<br />Items</div>
+                    <div className="stat-icon" role="img" aria-label="Items icon" style={{
+                      fontSize: '2rem',
+                      opacity: '0.7'
+                    }}>📋</div>
+                  </div>
+                  <div className="stat-value" aria-label={`${totalItems} items`} style={{
+                    fontSize: '2.5rem',
+                    fontWeight: '800',
+                    color: '#1e293b',
+                    margin: '0'
+                  }}>{totalItems}</div>
+                  <small className="stat-description" style={{
+                    fontSize: '0.75rem',
+                    color: '#64748b',
+                    fontStyle: 'italic',
+                    marginTop: '0.5rem',
+                    display: 'block'
+                  }}>Including multi-day quantities</small>
+                </div>
+                <div className="stat-card today-orders" role="article" aria-label={`Today's orders: ${todayOrders}`} style={{
+                  background: '#ffffff',
+                  borderRadius: '16px',
+                  padding: '1.5rem',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+                  border: '1px solid #e2e8f0',
+                  borderLeft: '5px solid #f59e0b',
+                  position: 'relative',
+                  transition: 'all 0.3s ease',
+                  cursor: 'pointer'
+                }}>
+                  <div className="stat-header" style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    marginBottom: '1rem'
+                  }}>
+                    <div className="stat-label" style={{
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#64748b',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      lineHeight: '1.2'
+                    }}>Today's<br />Orders</div>
+                    <div className="stat-icon" role="img" aria-label="Today icon" style={{
+                      fontSize: '2rem',
+                      opacity: '0.7'
+                    }}>📅</div>
+                  </div>
+                  <div className="stat-value" style={{
+                    fontSize: '2.5rem',
+                    fontWeight: '800',
+                    color: '#1e293b',
+                    margin: '0'
+                  }}>{todayOrders}</div>
+                  <div style={{
+                    fontSize: '0.75rem',
+                    color: '#64748b',
+                    fontStyle: 'italic',
+                    marginTop: '0.5rem'
+                  }}>Requires immediate attention</div>
+                </div>
+
+                <div className="stat-card urgent-orders" role="article" aria-label={`Urgent orders: ${urgentOrders}`} style={{
+                  background: '#ffffff',
+                  borderRadius: '16px',
+                  padding: '1.5rem',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+                  border: '1px solid #e2e8f0',
+                  borderLeft: '5px solid #ef4444',
+                  position: 'relative',
+                  transition: 'all 0.3s ease',
+                  cursor: 'pointer'
+                }}>
+                  <div className="stat-header" style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    marginBottom: '1rem'
+                  }}>
+                    <div className="stat-label" style={{
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#64748b',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      lineHeight: '1.2'
+                    }}>Urgent<br />Orders</div>
+                    <div className="stat-icon" role="img" aria-label="Urgent icon" style={{
+                      fontSize: '2rem',
+                      opacity: '0.7'
+                    }}>🚨</div>
+                  </div>
+                  <div className="stat-value" style={{
+                    fontSize: '2.5rem',
+                    fontWeight: '800',
+                    color: '#1e293b',
+                    margin: '0'
+                  }}>{urgentOrders}</div>
+                  <div style={{
+                    fontSize: '0.75rem',
+                    color: '#ef4444',
+                    fontWeight: '600',
+                    marginTop: '0.5rem'
+                  }}>Within 2 hours</div>
+                </div>
+
+                <div className="stat-card upcoming-orders" role="article" aria-label={`Upcoming orders: ${upcomingOrders}`} style={{
+                  background: '#ffffff',
+                  borderRadius: '16px',
+                  padding: '1.5rem',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+                  border: '1px solid #e2e8f0',
+                  borderLeft: '5px solid #8b5cf6',
+                  position: 'relative',
+                  transition: 'all 0.3s ease',
+                  cursor: 'pointer'
+                }}>
+                  <div className="stat-header" style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    marginBottom: '1rem'
+                  }}>
+                    <div className="stat-label" style={{
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#64748b',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      lineHeight: '1.2'
+                    }}>Upcoming<br />Orders</div>
+                    <div className="stat-icon" role="img" aria-label="Upcoming icon" style={{
+                      fontSize: '2rem',
+                      opacity: '0.7'
+                    }}>📈</div>
+                  </div>
+                  <div className="stat-value" style={{
+                    fontSize: '2.5rem',
+                    fontWeight: '800',
+                    color: '#1e293b',
+                    margin: '0'
+                  }}>{upcomingOrders}</div>
+                  <div style={{
+                    fontSize: '0.75rem',
+                    color: '#64748b',
+                    fontStyle: 'italic',
+                    marginTop: '0.5rem'
+                  }}>Future requirements</div>
                 </div>
               </div>
 
-              <div className="orders-table-container">
-                <table className="orders-table">
+              <div className="orders-table-container" role="region" aria-label="Procurement orders data table" style={{
+                background: '#ffffff',
+                borderRadius: '16px',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+                border: '1px solid #e2e8f0',
+                overflow: 'hidden'
+              }}>
+                <table className="orders-table" role="table" aria-label="List of procurement orders" style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+                }}>
                   <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Time</th>
-                      <th>Duration</th>
-                      <th>Meeting</th>
-                      <th>Organizer</th>
-                      <th>Room</th>
-                      <th>Attendees</th>
-                      <th>Items Required</th>
-                      <th>Status</th>
+                    <tr role="row" style={{
+                      background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)'
+                    }}>
+                      <th role="columnheader" scope="col" aria-sort="none" style={{
+                        padding: '1.25rem 1rem',
+                        textAlign: 'left',
+                        fontWeight: '700',
+                        color: '#1e293b',
+                        fontSize: '0.875rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        borderBottom: '2px solid #e2e8f0'
+                      }}>Date</th>
+                      <th role="columnheader" scope="col" aria-sort="none" style={{
+                        padding: '1.25rem 1rem',
+                        textAlign: 'left',
+                        fontWeight: '700',
+                        color: '#1e293b',
+                        fontSize: '0.875rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        borderBottom: '2px solid #e2e8f0'
+                      }}>Time</th>
+                      <th role="columnheader" scope="col" aria-sort="none" style={{
+                        padding: '1.25rem 1rem',
+                        textAlign: 'left',
+                        fontWeight: '700',
+                        color: '#1e293b',
+                        fontSize: '0.875rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        borderBottom: '2px solid #e2e8f0'
+                      }}>Duration</th>
+                      <th role="columnheader" scope="col" aria-sort="none" style={{
+                        padding: '1.25rem 1rem',
+                        textAlign: 'left',
+                        fontWeight: '700',
+                        color: '#1e293b',
+                        fontSize: '0.875rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        borderBottom: '2px solid #e2e8f0'
+                      }}>Meeting</th>
+                      <th role="columnheader" scope="col" aria-sort="none" style={{
+                        padding: '1.25rem 1rem',
+                        textAlign: 'left',
+                        fontWeight: '700',
+                        color: '#1e293b',
+                        fontSize: '0.875rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        borderBottom: '2px solid #e2e8f0'
+                      }}>Organizer</th>
+                      <th role="columnheader" scope="col" aria-sort="none" style={{
+                        padding: '1.25rem 1rem',
+                        textAlign: 'left',
+                        fontWeight: '700',
+                        color: '#1e293b',
+                        fontSize: '0.875rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        borderBottom: '2px solid #e2e8f0'
+                      }}>Room</th>
+                      <th role="columnheader" scope="col" aria-sort="none" style={{
+                        padding: '1.25rem 1rem',
+                        textAlign: 'left',
+                        fontWeight: '700',
+                        color: '#1e293b',
+                        fontSize: '0.875rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        borderBottom: '2px solid #e2e8f0'
+                      }}>Attendees</th>
+                      <th role="columnheader" scope="col" aria-sort="none" style={{
+                        padding: '1.25rem 1rem',
+                        textAlign: 'left',
+                        fontWeight: '700',
+                        color: '#1e293b',
+                        fontSize: '0.875rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        borderBottom: '2px solid #e2e8f0'
+                      }}>Items Required</th>
+                      <th role="columnheader" scope="col" aria-sort="none" style={{
+                        padding: '1.25rem 1rem',
+                        textAlign: 'left',
+                        fontWeight: '700',
+                        color: '#1e293b',
+                        fontSize: '0.875rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        borderBottom: '2px solid #e2e8f0'
+                      }}>Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {orders.map(order => {
+                    {paginatedOrders.map(order => {
                       const orderStatus = getOrderStatus(order);
                       return (
-                        <tr key={order.id} className={orderStatus.className}>
-                          <td>{formatDate(order.date || order.startDate)}</td>
-                          <td>{formatTime(order.time || order.startTime)}</td>
-                          <td>
-                            <span className={`duration-badge ${order.duration ? order.duration.toLowerCase().replace(' ', '-') : ''}`}>
+                        <tr key={order.id} style={{
+                          borderBottom: '1px solid #f1f5f9',
+                          transition: 'all 0.2s ease'
+                        }}
+                          onMouseEnter={(e) => e.target.closest('tr').style.backgroundColor = '#f8fafc'}
+                          onMouseLeave={(e) => e.target.closest('tr').style.backgroundColor = 'transparent'}>
+                          <td style={{
+                            padding: '1rem',
+                            fontSize: '0.875rem',
+                            fontWeight: '500',
+                            color: '#374151'
+                          }}>{formatDate(order.date || order.startDate)}</td>
+                          <td style={{
+                            padding: '1rem',
+                            fontSize: '0.875rem',
+                            color: '#64748b'
+                          }}>{formatTime(order.time || order.startTime)}</td>
+                          <td style={{ padding: '1rem' }}>
+                            <span style={{
+                              display: 'inline-block',
+                              padding: '0.25rem 0.75rem',
+                              borderRadius: '6px',
+                              fontSize: '0.75rem',
+                              fontWeight: '600',
+                              color: '#1e293b',
+                              background: getPriorityColor(order.priority).bg,
+                              border: `1px solid ${getPriorityColor(order.priority).border}`
+                            }}>
                               {order.duration}
                             </span>
                             {order.totalDays > 1 && (
-                              <div className="duration-days">({order.totalDays} days)</div>
+                              <div style={{
+                                fontSize: '0.75rem',
+                                color: '#64748b',
+                                marginTop: '0.25rem'
+                              }}>({order.totalDays} days)</div>
                             )}
                           </td>
-                          <td>{order.title}</td>
-                          <td>{order.organizer}</td>
-                          <td>{order.roomName}</td>
-                          <td>{order.attendeeCount || 1}</td>
-                          <td>
-                            <div className="items-list">
+                          <td style={{
+                            padding: '1rem',
+                            fontSize: '0.875rem',
+                            fontWeight: '600',
+                            color: '#1e293b'
+                          }}>{order.title}</td>
+                          <td style={{
+                            padding: '1rem',
+                            fontSize: '0.875rem',
+                            color: '#64748b'
+                          }}>{order.organizer}</td>
+                          <td style={{
+                            padding: '1rem',
+                            fontSize: '0.875rem',
+                            color: '#64748b'
+                          }}>
+                            <div>{order.roomName}</div>
+                            <div style={{
+                              fontSize: '0.75rem',
+                              color: '#9ca3af',
+                              marginTop: '0.25rem'
+                            }}>{order.roomLocation}</div>
+                          </td>
+                          <td style={{
+                            padding: '1rem',
+                            fontSize: '0.875rem',
+                            textAlign: 'center',
+                            fontWeight: '500',
+                            color: '#64748b'
+                          }}>{order.attendeeCount || 1}</td>
+                          <td style={{ padding: '1rem' }}>
+                            <div style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '0.5rem'
+                            }}>
                               {order.procurementOrders.map((item, index) => {
                                 const dailyQuantity = item.quantity;
                                 const totalQuantity = dailyQuantity * order.totalDays;
                                 return (
-                                  <div key={index} className="item-row">
-                                    <span className="item-name">{item.itemName}</span>
-                                    <span className="item-quantity">
+                                  <div key={index} style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    padding: '0.5rem 0.75rem',
+                                    background: '#f8fafc',
+                                    borderRadius: '6px',
+                                    border: '1px solid #e2e8f0'
+                                  }}>
+                                    <span style={{
+                                      fontSize: '0.875rem',
+                                      fontWeight: '500',
+                                      color: '#374151',
+                                      flex: '1'
+                                    }}>{item.itemName}</span>
+                                    <span style={{
+                                      fontSize: '0.875rem',
+                                      fontWeight: '700',
+                                      color: '#059669',
+                                      marginLeft: '0.5rem'
+                                    }}>
                                       ×{totalQuantity}
                                       {order.totalDays > 1 && (
-                                        <span className="daily-quantity"> ({dailyQuantity}/day)</span>
+                                        <span style={{
+                                          fontSize: '0.75rem',
+                                          color: '#64748b',
+                                          fontWeight: '400'
+                                        }}> ({dailyQuantity}/day)</span>
                                       )}
                                     </span>
                                     {item.notes && (
-                                      <div className="item-notes">{item.notes}</div>
+                                      <div style={{
+                                        fontSize: '0.75rem',
+                                        color: '#64748b',
+                                        marginTop: '0.25rem',
+                                        fontStyle: 'italic'
+                                      }}>{item.notes}</div>
                                     )}
                                   </div>
                                 );
                               })}
                             </div>
                           </td>
-                          <td>
-                            <span className={`status-badge ${orderStatus.className}`}>
+                          <td style={{ padding: '1rem' }}>
+                            <span style={{
+                              display: 'inline-block',
+                              padding: '0.375rem 0.75rem',
+                              borderRadius: '6px',
+                              fontSize: '0.75rem',
+                              fontWeight: '600',
+                              color: getStatusColor(orderStatus).color,
+                              backgroundColor: getStatusColor(orderStatus).bg,
+                              border: `1px solid ${getStatusColor(orderStatus).border}`
+                            }}>
                               {orderStatus.status}
                             </span>
                           </td>
@@ -3861,6 +4601,94 @@ const ProcurementDashboard = ({ bookings, rooms, onClose }) => {
                     })}
                   </tbody>
                 </table>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div style={{
+                    padding: '1.5rem',
+                    borderTop: '1px solid #e2e8f0',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    background: '#f8fafc'
+                  }}>
+                    <div style={{
+                      fontSize: '0.875rem',
+                      color: '#64748b'
+                    }}>
+                      Page {currentPage} of {totalPages} • {filteredOrders.length} total orders
+                    </div>
+                    <div style={{
+                      display: 'flex',
+                      gap: '0.5rem'
+                    }}>
+                      <button
+                        onClick={() => setCurrentPage(currentPage - 1)}
+                        disabled={currentPage <= 1}
+                        style={{
+                          padding: '0.5rem 1rem',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          background: currentPage <= 1 ? '#f9fafb' : '#ffffff',
+                          color: currentPage <= 1 ? '#9ca3af' : '#374151',
+                          cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
+                          fontSize: '0.875rem'
+                        }}
+                      >
+                        ← Previous
+                      </button>
+
+                      {/* Page Numbers */}
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentPage - 2 + i;
+                        }
+
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => setCurrentPage(pageNum)}
+                            style={{
+                              padding: '0.5rem 0.75rem',
+                              border: '1px solid #d1d5db',
+                              borderRadius: '6px',
+                              background: pageNum === currentPage ? '#3b82f6' : '#ffffff',
+                              color: pageNum === currentPage ? '#ffffff' : '#374151',
+                              cursor: 'pointer',
+                              fontSize: '0.875rem',
+                              fontWeight: pageNum === currentPage ? '600' : '400'
+                            }}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+
+                      <button
+                        onClick={() => setCurrentPage(currentPage + 1)}
+                        disabled={currentPage >= totalPages}
+                        style={{
+                          padding: '0.5rem 1rem',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          background: currentPage >= totalPages ? '#f9fafb' : '#ffffff',
+                          color: currentPage >= totalPages ? '#9ca3af' : '#374151',
+                          cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
+                          fontSize: '0.875rem'
+                        }}
+                      >
+                        Next →
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -3884,7 +4712,7 @@ const MeetingSpaceSelectionModal = ({ rooms, onSelect, currentUser }) => {
 
   const getLocationFromName = (name) => {
     if (name.toLowerCase().includes('ground floor')) return 'Ground Floor';
-    if (name.toLowerCase().includes('first floor')) return 'First Floor';  
+    if (name.toLowerCase().includes('first floor')) return 'First Floor';
     if (name.toLowerCase().includes('1st floor')) return '1st Floor';
     if (name.toLowerCase().includes('underground')) return 'Underground';
     return 'Main Building';
@@ -3904,8 +4732,8 @@ const MeetingSpaceSelectionModal = ({ rooms, onSelect, currentUser }) => {
             <label className="form-label">Available Meeting Spaces</label>
             <div className="meeting-spaces-grid">
               {rooms.map(room => (
-                <div 
-                  key={room.id} 
+                <div
+                  key={room.id}
                   className={`meeting-space-card ${selectedRoomId === room.id.toString() ? 'selected' : ''}`}
                   onClick={() => setSelectedRoomId(room.id.toString())}
                 >
@@ -3937,8 +4765,8 @@ const MeetingSpaceSelectionModal = ({ rooms, onSelect, currentUser }) => {
             </div>
           </div>
           <div className="form-buttons">
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="form-button primary large"
               disabled={!selectedRoomId}
             >

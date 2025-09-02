@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-The ICPAC Boardroom Booking System is a comprehensive web-based application designed for internal meeting room management and booking coordination. The system features a modern React frontend with a Django REST API backend, implementing role-based access control, real-time booking management, and Progressive Web App (PWA) capabilities.
+The ICPAC Boardroom Booking System is a comprehensive web-based application designed for internal meeting room management and booking coordination. The system features a modern React frontend with a Django REST API backend, implementing role-based access control, and real-time booking management.
 
 ## System Architecture
 
@@ -14,7 +14,6 @@ The ICPAC Boardroom Booking System is a comprehensive web-based application desi
 - **Routing**: React Router DOM 7.7.0 for SPA navigation
 - **Charts**: Chart.js 4.5.0 and Recharts 3.1.0 for analytics
 - **HTTP Client**: Axios 1.10.0 for API communication
-- **PWA Support**: Service Worker, Manifest, Offline capabilities
 - **Email Integration**: EmailJS browser SDK for notifications
 
 **Backend:**
@@ -58,7 +57,6 @@ src/
 ```
 
 ### Key Features
-- **Progressive Web App**: Installable with offline capabilities
 - **Responsive Design**: Mobile-first approach with Tailwind CSS
 - **Role-Based UI**: Dynamic interface based on user permissions
 - **Real-time Updates**: WebSocket integration for live booking status
@@ -180,19 +178,6 @@ icpac-booking-backend/
 - **Performance Monitoring**: Database query optimization
 - **Health Checks**: Basic system monitoring endpoints
 
-## Progressive Web App Features
-
-### PWA Capabilities
-- **Installable**: Native app-like installation on devices
-- **Offline Support**: Service worker for offline functionality
-- **Responsive**: Mobile-first responsive design
-- **App Shortcuts**: Quick actions from installed app icon
-- **Theme Integration**: Custom colors and branding
-
-### Manifest Configuration
-- **App Identity**: ICPAC branding and theming
-- **Icons**: Multiple icon sizes for different contexts
-- **Display Modes**: Standalone app experience
 - **Shortcuts**: Quick booking, my bookings, admin panel
 
 ## Integration Capabilities
@@ -279,7 +264,7 @@ icpac-booking-backend/
 
 ## Conclusion
 
-The ICPAC Boardroom Booking System represents a modern, scalable solution for organizational meeting room management. With its comprehensive feature set, robust security implementation, and Progressive Web App capabilities, the system provides an excellent foundation for internal collaboration and resource management.
+The ICPAC Boardroom Booking System represents a modern, scalable solution for organizational meeting room management. With its comprehensive feature set and robust security implementation, the system provides an excellent foundation for internal collaboration and resource management.
 
 The modular architecture supports future enhancements and scaling requirements, while the containerized deployment ensures consistent and reliable operation across different environments. The role-based access control and procurement integration make it suitable for professional organizational use.
 

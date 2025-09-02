@@ -307,7 +307,7 @@ class EmailNotificationService {
   // Format duration for email templates
   formatDuration(bookingData) {
     if (bookingData.bookingType === 'full-day') {
-      return 'Full Day (8:00 AM - 4:00 PM)';
+      return 'Full Day (8:00 AM - 6:00 PM)';
     } else if (bookingData.bookingType === 'multi-day') {
       const startDate = new Date(bookingData.startDate);
       const endDate = new Date(bookingData.endDate);

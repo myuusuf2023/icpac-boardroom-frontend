@@ -1,3 +1,37 @@
+/* Modern Procurement Dashboard Design System */
+:root {
+  /* Primary Colors */
+  --bg-main: #f8fafc;
+  --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  --bg-card: #ffffff;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  
+  /* Accent Colors */
+  --color-total-orders: #3b82f6;
+  --color-total-items: #10b981;
+  --color-today-orders: #f59e0b;
+  --color-declined-orders: #ef4444;
+  
+  /* Typography */
+  --font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+  
+  /* Shadows and Effects */
+  --shadow-base: 0 4px 20px rgba(0, 0, 0, 0.08);
+  --shadow-hover: 0 8px 25px rgba(0, 0, 0, 0.12);
+  --shadow-button: 0 4px 12px rgba(0, 0, 0, 0.1);
+  
+  /* Borders */
+  --border-color: #e2e8f0;
+  --border-radius: 15px;
+  --border-radius-small: 10px;
+}
+
 /* BookingBoard Styles */
 .booking-container {
   min-height: 100vh;
@@ -440,8 +474,9 @@
 }
 
 .modal-content.large {
-  max-width: 800px;
-  width: 90%;
+  max-width: 1200px;
+  width: 95%;
+  padding: 0;
 }
 
 .users-table {
@@ -1561,217 +1596,629 @@
 }
 
 /* Procurement Dashboard Styles */
-.procurement-dashboard {
-  max-height: 70vh;
-  overflow-y: auto;
+/* FORCE MODERN PROCUREMENT DASHBOARD STYLES - OVERRIDE ALL */
+.modal-content.large .procurement-dashboard {
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
+  border-radius: 0 0 15px 15px !important;
+  padding: 20px !important;
+  max-height: calc(80vh - 100px) !important;
+  overflow-y: auto !important;
 }
 
-.no-orders {
-  text-align: center;
-  padding: 40px;
-  color: #6b7280;
+/* FORCE Override base modal styles for procurement dashboard */
+.modal-content.large .modal-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+  border-radius: 15px 15px 0 0 !important;
+  margin: 0 !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-start !important;
+  padding: 20px !important;
 }
 
-.orders-container {
+/* Dashboard Container */
+.procurement-dashboard .orders-container {
+  max-width: 1400px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 25px;
 }
 
-.dashboard-stats {
-  display: flex;
-  gap: 20px;
-  justify-content: space-around;
-  margin-bottom: 20px;
-}
-
-.stat-card {
-  background: #f8fafc;
-  padding: 16px;
-  border-radius: 8px;
+/* No Orders State */
+.no-orders {
   text-align: center;
-  border: 1px solid #e2e8f0;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+  background: var(--bg-card);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-base);
+}
+
+.no-orders h3 {
+  font-size: 1.5rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  margin: 0 0 10px 0;
+}
+
+.no-orders p {
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* FORCE MODERN Stats Grid */
+.procurement-dashboard .dashboard-stats,
+.modal-content.large .dashboard-stats {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)) !important;
+  gap: 25px !important;
+  margin-bottom: 25px !important;
+}
+
+.procurement-dashboard .stat-card,
+.modal-content.large .stat-card {
+  background: #ffffff !important;
+  border-radius: 15px !important;
+  padding: 20px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+  border: 1px solid #e2e8f0 !important;
+  position: relative !important;
+  transition: all 0.3s ease !important;
+  overflow: hidden !important;
+}
+
+/* FORCE MODERN STAT CARD EFFECTS */
+.procurement-dashboard .stat-card:hover,
+.modal-content.large .stat-card:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12) !important;
+}
+
+.procurement-dashboard .stat-card::before,
+.modal-content.large .stat-card::before {
+  content: '' !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 4px !important;
+  transition: width 0.3s ease !important;
+}
+
+.procurement-dashboard .stat-card:hover::before,
+.modal-content.large .stat-card:hover::before {
+  width: 8px !important;
+}
+
+.procurement-dashboard .stat-card:nth-child(1)::before,
+.modal-content.large .stat-card:nth-child(1)::before {
+  background: #3b82f6 !important;
+}
+
+.procurement-dashboard .stat-card:nth-child(2)::before,
+.modal-content.large .stat-card:nth-child(2)::before {
+  background: #10b981 !important;
+}
+
+.procurement-dashboard .stat-card:nth-child(3)::before,
+.modal-content.large .stat-card:nth-child(3)::before {
+  background: #f59e0b !important;
+}
+
+.procurement-dashboard .stat-card:nth-child(4)::before,
+.procurement-dashboard .declined-stat::before,
+.modal-content.large .stat-card:nth-child(4)::before,
+.modal-content.large .declined-stat::before {
+  background: #ef4444 !important;
+}
+
+/* FORCE MODERN STAT VALUES AND LABELS */
+.procurement-dashboard .stat-value,
+.modal-content.large .stat-value,
+.procurement-dashboard .stat-number,
+.modal-content.large .stat-number {
+  font-size: 2.5rem !important;
+  font-weight: 800 !important;
+  color: #1e293b !important;
+  margin: 0 !important;
+  display: block !important;
+}
+
+.procurement-dashboard .stat-header,
+.modal-content.large .stat-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-start !important;
+  margin-bottom: 15px !important;
+}
+
+.procurement-dashboard .stat-label,
+.modal-content.large .stat-label {
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  color: #64748b !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  line-height: 1.2 !important;
+}
+
+.procurement-dashboard .stat-icon,
+.modal-content.large .stat-icon {
+  font-size: 1.5rem !important;
+  opacity: 0.8 !important;
 }
 
 .stat-card h4 {
-  margin: 0 0 8px 0;
+  margin: 0 0 15px 0;
   font-size: 0.875rem;
-  color: #6b7280;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.stat-card h4::after {
+  content: '📦';
+  font-size: 1.5rem;
+  opacity: 0.6;
+}
+
+.stat-card:nth-child(2) h4::after {
+  content: '📋';
+}
+
+.stat-card:nth-child(3) h4::after {
+  content: '⏰';
+}
+
+.stat-card:nth-child(4) h4::after,
+.declined-stat h4::after {
+  content: '❌';
 }
 
 .stat-number {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #10b981;
+  font-size: 2.5rem;
+  font-weight: var(--font-weight-extrabold);
+  color: var(--text-primary);
+  margin: 0;
+  display: block;
 }
 
 .stat-description {
   display: block;
   font-size: 0.75rem;
-  color: #6b7280;
-  margin-top: 4px;
-  font-weight: 400;
+  color: var(--text-secondary);
+  margin-top: 8px;
+  font-weight: var(--font-weight-medium);
 }
 
 .declined-stat {
-  border: 1px solid #fca5a5;
-  background: #fef2f2;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
 }
 
 .declined-number {
-  color: #dc2626;
+  color: var(--color-declined-orders);
 }
 
-.orders-table-container {
-  overflow-x: auto;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
+/* FORCE MODERN DATA TABLE */
+.procurement-dashboard .orders-table-container,
+.modal-content.large .orders-table-container {
+  background: #ffffff !important;
+  border-radius: 15px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+  border: 1px solid #e2e8f0 !important;
+  overflow: hidden !important;
 }
 
-.orders-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
+.procurement-dashboard .orders-table,
+.modal-content.large .orders-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  background: #ffffff !important;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
 }
 
-.orders-table th,
-.orders-table td {
-  padding: 12px;
-  text-align: left;
-  border-bottom: 1px solid #e2e8f0;
+.procurement-dashboard .orders-table th,
+.procurement-dashboard .orders-table td,
+.modal-content.large .orders-table th,
+.modal-content.large .orders-table td {
+  padding: 16px !important;
+  text-align: left !important;
+  border-bottom: 1px solid #e2e8f0 !important;
 }
 
-.orders-table th {
-  background: #f8fafc;
-  font-weight: 600;
-  color: #374151;
-  font-size: 0.875rem;
+.procurement-dashboard .orders-table th,
+.modal-content.large .orders-table th {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important;
+  font-weight: 600 !important;
+  color: white !important;
+  font-size: 0.875rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
 }
 
-.orders-table td {
-  font-size: 0.875rem;
-  color: #1f2937;
+.procurement-dashboard .orders-table td,
+.modal-content.large .orders-table td {
+  font-size: 0.875rem !important;
+  color: #1e293b !important;
 }
 
-.orders-table tbody tr:hover {
-  background: #f8fafc;
+.procurement-dashboard .orders-table tbody tr,
+.modal-content.large .orders-table tbody tr {
+  transition: background-color 0.2s ease !important;
 }
 
+.procurement-dashboard .orders-table tbody tr:hover,
+.modal-content.large .orders-table tbody tr:hover {
+  background: #f1f5f9 !important;
+}
+
+/* Modern Badges */
 .duration-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 20px;
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .duration-badge.hourly {
-  background: #dcfce7;
-  color: #16a34a;
+  background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+  color: #047857;
+  border: 1px solid #10b981;
 }
 
 .duration-badge.full-day {
-  background: #dbeafe;
-  color: #2563eb;
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  color: #1d4ed8;
+  border: 1px solid #3b82f6;
 }
 
 .duration-badge.multi-day {
-  background: #ddd6fe;
-  color: #7c3aed;
+  background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+  color: #6d28d9;
+  border: 1px solid #8b5cf6;
 }
 
 .duration-badge.weekly {
-  background: #fce7f3;
+  background: linear-gradient(135deg, #fce7f3, #fbcfe8);
   color: #be185d;
+  border: 1px solid #ec4899;
 }
 
 .duration-days {
   font-size: 0.75rem;
-  color: #6b7280;
-  margin-top: 2px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  font-weight: var(--font-weight-medium);
+  background: rgba(100, 116, 139, 0.1);
+  padding: 2px 8px;
+  border-radius: 12px;
 }
 
+/* Modern Items Display */
 .items-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
 .item-row {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--color-total-items);
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.item-row:hover {
+  background: #f1f5f9;
+  border-left-color: #047857;
 }
 
 .item-name {
-  font-weight: 500;
-  color: #1f2937;
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  font-size: 0.875rem;
 }
 
 .item-quantity {
-  font-weight: 600;
-  color: #059669;
+  font-weight: var(--font-weight-semibold);
+  color: #047857;
+  font-size: 0.875rem;
+  background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+  padding: 2px 8px;
+  border-radius: 12px;
 }
 
 .daily-quantity {
   font-size: 0.75rem;
-  color: #6b7280;
-  font-weight: 400;
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-regular);
 }
 
 .item-notes {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: var(--text-secondary);
   font-style: italic;
-  margin-top: 2px;
+  margin-top: 4px;
+  padding: 4px 8px;
+  background: rgba(100, 116, 139, 0.1);
+  border-radius: 6px;
 }
 
+/* Modern Status Badges */
 .status-badge {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 20px;
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .status-badge.past {
-  background: #fee2e2;
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
   color: #dc2626;
+  border: 1px solid #ef4444;
 }
 
 .status-badge.today {
-  background: #fef3c7;
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
   color: #d97706;
+  border: 1px solid #f59e0b;
 }
 
 .status-badge.upcoming {
-  background: #dbeafe;
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
   color: #2563eb;
+  border: 1px solid #3b82f6;
 }
 
 .status-badge.declined {
-  background: #fecaca;
+  background: linear-gradient(135deg, #fecaca, #fca5a5);
   color: #dc2626;
-  font-weight: 600;
+  border: 1px solid #ef4444;
+  font-weight: var(--font-weight-bold);
+  animation: pulse 2s infinite;
 }
 
+/* Table Row States */
 .orders-table tbody tr.past {
   opacity: 0.7;
 }
 
 .orders-table tbody tr.today {
-  background: #fef3c7;
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
 }
 
 .orders-table tbody tr.upcoming {
-  background: #f0f9ff;
+  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
 }
 
 .orders-table tbody tr.declined {
-  background: #fecaca;
-  opacity: 0.8;
+  background: linear-gradient(135deg, #fecaca, #fca5a5);
+  opacity: 0.9;
+}
+
+/* Modern Header Section for Dashboard */
+.modal-header .download-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.modal-header .download-section h4 {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.download-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* FORCE MODERN DOWNLOAD BUTTONS */
+.procurement-dashboard .download-btn,
+.modal-content.large .download-btn,
+.modal-header .download-btn {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 12px 20px !important;
+  border: none !important;
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+/* FORCE BUTTON COLORS AND HOVER EFFECTS */
+.procurement-dashboard .download-btn:hover,
+.modal-content.large .download-btn:hover,
+.modal-header .download-btn:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12) !important;
+}
+
+.procurement-dashboard .btn-pdf,
+.modal-content.large .btn-pdf,
+.modal-header .btn-pdf {
+  background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+  color: white !important;
+}
+
+.procurement-dashboard .btn-hourly,
+.modal-content.large .btn-hourly,
+.modal-header .btn-hourly {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  color: white !important;
+}
+
+/* NUCLEAR OPTION - MAXIMUM SPECIFICITY FOR MODERN PROCUREMENT DASHBOARD */
+.modal-overlay .modal-content.large.modern-procurement-modal {
+  max-width: 1200px !important;
+  width: 95% !important;
+  padding: 0 !important;
+}
+
+.modal-overlay .modal-content.large.modern-procurement-modal .modal-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+  border-radius: 15px 15px 0 0 !important;
+  margin: 0 !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-start !important;
+  padding: 20px !important;
+}
+
+.modal-overlay .modal-content.large.modern-procurement-modal .modal-title {
+  font-size: 1.75rem !important;
+  font-weight: 800 !important;
+  color: #1e293b !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.modal-overlay .modal-content.large.modern-procurement-modal .procurement-dashboard {
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
+  border-radius: 0 0 15px 15px !important;
+  padding: 20px !important;
+  max-height: calc(80vh - 100px) !important;
+  overflow-y: auto !important;
+}
+
+.modal-overlay .modal-content.large.modern-procurement-modal .dashboard-stats {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)) !important;
+  gap: 25px !important;
+  margin-bottom: 25px !important;
+}
+
+.modal-overlay .modal-content.large.modern-procurement-modal .stat-card {
+  background: #ffffff !important;
+  border-radius: 15px !important;
+  padding: 20px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+  border: 1px solid #e2e8f0 !important;
+  position: relative !important;
+  transition: all 0.3s ease !important;
+  overflow: hidden !important;
+}
+
+.modal-overlay .modal-content.large.modern-procurement-modal .stat-card::before {
+  content: '' !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 4px !important;
+  transition: width 0.3s ease !important;
+}
+
+.modal-overlay .modal-content.large.modern-procurement-modal .stat-card:nth-child(1)::before {
+  background: #3b82f6 !important;
+}
+
+.modal-overlay .modal-content.large.modern-procurement-modal .stat-card:nth-child(2)::before {
+  background: #10b981 !important;
+}
+
+.modal-overlay .modal-content.large.modern-procurement-modal .stat-card:nth-child(3)::before {
+  background: #f59e0b !important;
+}
+
+.modal-overlay .modal-content.large.modern-procurement-modal .stat-card:nth-child(4)::before {
+  background: #ef4444 !important;
+}
+
+.modal-overlay .modal-content.large.modern-procurement-modal .stat-value {
+  font-size: 2.5rem !important;
+  font-weight: 800 !important;
+  color: #1e293b !important;
+  margin: 0 !important;
+  display: block !important;
+}
+
+.download-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+}
+
+.download-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.download-btn:hover::before {
+  left: 100%;
+}
+
+.pdf-btn {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  color: white;
+}
+
+.green-btn {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+}
+
+.blue-btn {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+}
+
+.yellow-btn {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+}
+
+.purple-btn {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: white;
 }
 
 /* Modal header with download buttons */
@@ -2382,7 +2829,7 @@
 .branding-logo {
   width: 80px;
   height: 80px;
-  background: white;
+  background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -2392,6 +2839,18 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   position: relative;
   z-index: 1;
+}
+
+.branding-logo img {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+  border-radius: 0;
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  padding: 8px;
+  filter: brightness(0) invert(1); /* Make logo white for visibility on blue background */
 }
 
 .branding-title {
@@ -2708,6 +3167,12 @@
     margin-bottom: 1rem;
   }
   
+  .branding-logo img {
+    width: 45px;
+    height: 45px;
+    padding: 6px;
+  }
+  
   .branding-title {
     font-size: 1.5rem;
   }
@@ -2777,6 +3242,12 @@
     width: 50px;
     height: 50px;
     font-size: 1.25rem;
+  }
+  
+  .branding-logo img {
+    width: 35px;
+    height: 35px;
+    padding: 4px;
   }
   
   .branding-title {
@@ -4351,34 +4822,6 @@
   box-shadow: 0 4px 8px rgba(99, 102, 241, 0.3);
 }
 
-/* PWA Install Button */
-.install-pwa-btn {
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  animation: pulse-install 2s infinite;
-}
-
-.install-pwa-btn:hover {
-  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(34, 197, 94, 0.3);
-  animation: none;
-}
-
-@keyframes pulse-install {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-}
 
 /* Dark mode theme */
 body.dark-mode {
@@ -4866,5 +5309,121 @@ body.dark-mode .modal-footer-note {
   .quick-book-btn {
     flex: 1;
     min-width: 120px;
+  }
+}
+
+/* Modern Procurement Dashboard Responsive Design */
+@media (max-width: 1024px) {
+  .modal-header {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+  
+  .modal-header .download-section {
+    align-items: center;
+  }
+  
+  .dashboard-stats {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .procurement-dashboard {
+    padding: 15px;
+    max-height: 85vh;
+  }
+  
+  .modal-header {
+    padding: 15px;
+    align-items: center;
+  }
+  
+  .modal-title {
+    font-size: 1.5rem;
+  }
+  
+  .dashboard-stats {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .stat-card {
+    padding: 15px;
+  }
+  
+  .stat-value {
+    font-size: 2rem;
+  }
+  
+  .download-group {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .download-btn {
+    justify-content: center;
+    width: 100%;
+  }
+  
+  .orders-table-container {
+    overflow-x: auto;
+    border-radius: 12px;
+  }
+  
+  .orders-table {
+    min-width: 800px;
+  }
+  
+  .orders-table th,
+  .orders-table td {
+    padding: 12px;
+  }
+  
+  .item-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  .procurement-dashboard {
+    padding: 10px;
+  }
+  
+  .modal-header {
+    padding: 10px;
+  }
+  
+  .modal-title {
+    font-size: 1.25rem;
+  }
+  
+  .stat-card {
+    padding: 12px;
+  }
+  
+  .stat-value {
+    font-size: 1.75rem;
+  }
+  
+  .download-btn {
+    padding: 10px 15px;
+    font-size: 0.8rem;
+  }
+  
+  .orders-table th,
+  .orders-table td {
+    padding: 8px;
+    font-size: 0.8rem;
+  }
+  
+  .duration-badge,
+  .status-badge {
+    font-size: 0.7rem;
+    padding: 4px 8px;
   }
 }
