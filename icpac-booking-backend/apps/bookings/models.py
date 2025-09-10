@@ -270,8 +270,8 @@ class Booking(models.Model):
         if user.role == 'room_admin':
             return True
         
-        # User can modify their own pending bookings
-        if self.user == user and self.is_pending:
+        # User can modify their own bookings (pending or approved)
+        if self.user == user and self.approval_status in ['pending', 'approved']:
             return True
         
         return False
